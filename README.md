@@ -11,11 +11,11 @@
 
 | 插件 | 版本[以26.1为例] | 必需 | 说明 |
 |------|------|------|------|
-| **[ZMusic](https://github.com/zmusic-dev/zmusic-plugin)** | 2.12.0+ | ✅ | 核心音乐插件，提供播放/搜索/歌单功能 |
-| **[ZMusic Mod](https://github.com/zmusic-dev/zmusic-mod)** | 3.6.0+ (客户端) | ✅ | 客户端音频解码模组，玩家需安装 |
-| **[PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/)** | 2.11.6+ | ✅ | 歌词显示引擎的数据来源 |
+| **[ZMusic](https://github.com/zmusic-dev/zmusic-plugin)** | 2.12.0+ | ✅ | zmusic插件 |
+| **[ZMusic Mod](https://github.com/zmusic-dev/zmusic-mod)** | 3.6.0+ (客户端) | ✅ | Zmusic客户端模组 |
+| **[PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/)** | 2.11.6+ | ✅ | 歌词显示 |
 
-> ⚠️ **重要**: ZMusic 插件 + ZMusic Mod + PlaceholderAPI 三者缺一不可。
+>  ZMusic 插件 + ZMusic Mod + PlaceholderAPI 三者缺一不可。
 > - 服务端安装 ZMusic 插件和 PlaceholderAPI
 > - 客户端安装 ZMusic Mod（Fabric / NeoForge）
 
@@ -32,8 +32,8 @@
 
 ### 点歌播放
 - 选择音乐平台（网易云 / QQ / 酷狗 / 酷我 / Bilibili）
+- Tips: 需要bilibili渠道请联系zmusic交流群，可在配置取消显示不想看见的平台
 - 输入歌名即可播放
-- 配置文件可开关任意平台
 
 ### 全服点歌
 - 搜索歌曲分享给全服玩家
@@ -57,7 +57,7 @@
 
 ### 全服强制播放
 - 管理员强制所有在线玩家播放歌曲
-- 需要 `zmusicgui.admin` 权限，在平台选择界面末位
+- 需要 `zmusicgui.admin` 权限，在平台选择界面末位，无权限者此按钮隐藏显示
 
 ## 命令
 
@@ -95,7 +95,13 @@ platforms:                # 音乐平台开关，设置 enabled: false 可隐藏
 lyric:
   default-enabled: true   # 新玩家默认开启歌词
   default-mode: BOSSBAR   # BOSSBAR / ACTIONBAR
-  display-format: LYRIC   # LYRIC(仅当前句) / LYRIC_SINGER(歌词+歌手歌名)
+  update-ticks: 10  # 更新延迟
+  # 歌词显示格式:
+  #   LYRIC         — 仅当前句歌词 (默认)
+  #   LYRIC_SINGER  — 当前句 + 歌手 + 歌名
+  #   LYRIC_NEXT    — 当前句 + 下一句 (需ZMusic支持)
+  #   FULL          — 全部: 歌词 + 歌手 + 歌名 + 下一句
+  display-format: LYRIC
 
 music:
   cooldown-seconds: 5     # 点歌冷却时间
@@ -131,7 +137,7 @@ cd ZMusicGUI
 - 🐛 修复歌单管理平台选择界面无法返回主菜单的问题
 - 🐛 修复导入歌单提示显示 raw key 的问题（语言文件现在强制更新）
 - 🐛 修复选择平台后菜单不自动关闭的问题
-- ✨ 新增 `lyric.display-format` 配置：LYRIC（仅当前句）/ LYRIC_SINGER（歌词+歌手歌名）
+- ✨ 新增 `lyric.display-format` 配置
 - 🎨 默认歌词只显示当前句
 - 🎨 歌单管理改为两级菜单结构
 - 📊 集成 bStats 匿名数据统计
@@ -164,9 +170,9 @@ cd ZMusicGUI
 欢迎提交 Issue 和 Pull Request！
 
 1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
+2. 创建分支 (`git checkout -b feature/你的分支名字`)
+3. 提交更改 (`git commit -m '你的分支名字'`)
+4. 推送到分支 (`git push origin feature/你的分支名字`)
 5. 创建 Pull Request
 
 请确保代码风格一致，新功能有适当的配置项。
