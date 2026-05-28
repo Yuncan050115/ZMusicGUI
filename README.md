@@ -1,11 +1,11 @@
 # ZMusicGUI
 
-[![Version](https://img.shields.io/badge/version-1.1.3-blue.svg)](https://github.com/Yuncan/ZMusicGUI)
+[![Version](https://img.shields.io/badge/version-1.1.3-blue.svg)](https://github.com/Yuncan050115/ZMusicGUI)
 [![Paper](https://img.shields.io/badge/Paper-1.19--26.1-green.svg)](https://papermc.io)
 [![License](https://img.shields.io/badge/license-GPL--3.0-orange.svg)](LICENSE)
 [![bStats](https://img.shields.io/badge/bStats-enabled-brightgreen.svg)](https://bstats.org/plugin/bukkit/ZMusicGUI/31635)
 
-一个为 [ZMusic](https://github.com/zmusic-dev/zmusic-plugin) 设计的精美图形界面插件，提供歌单管理、点歌播放、歌词显示引擎等功能。
+一个为 [ZMusic](https://github.com/zmusic-dev/zmusic-plugin) 设计的精美图形界面插件，提供歌单管理、点歌播放、歌词显示等功能。
 
 ## 前置依赖
 
@@ -113,7 +113,7 @@ gui:
 ## 构建
 
 ```bash
-git clone https://github.com/Yuncan/ZMusicGUI.git
+git clone https://github.com/Yuncan050115/ZMusicGUI.git
 cd ZMusicGUI
 ./gradlew build
 # 输出: build/libs/ZMusicGUI-<version>.jar
@@ -132,31 +132,31 @@ cd ZMusicGUI
 - 🐛 修复导入歌单提示显示 raw key 的问题（语言文件现在强制更新）
 - 🐛 修复选择平台后菜单不自动关闭的问题
 - ✨ 新增 `lyric.display-format` 配置：LYRIC（仅当前句）/ LYRIC_SINGER（歌词+歌手歌名）
-- 🎨 默认歌词只显示当前一句
+- 🎨 默认歌词只显示当前句
 - 🎨 歌单管理改为两级菜单结构
 - 📊 集成 bStats 匿名数据统计
 - 🗑️ 移除歌词设置中的 ZMusic 原生 BossBar 切换
 
-### v1.1.2 (2026-05-29)
+### v1.1.2 (2026-05-28)
 - ✨ 全服强制播放移至平台选择界面末位
 - 🖱️ 左下角作者附魔书可点击打开网站
 - ⚙️ `show-credits` 配置开关作者信息显示
 - ⚙️ `public-request` 配置开关全服点歌功能
 
-### v1.1.1 (2026-05-29)
+### v1.1.1 (2026-05-28)
 - 🌐 全版本兼容：Paper 1.19 / 1.20 / 1.21 / 26.1
 - 🔧 BossBar 改为 Bukkit 原生 API
 - 🎵 歌单查看/导入使用 ZMusic 原生点击按钮
 - ✨ 新增全服强制播放功能 (Admin)
 
-### v1.1.0 (2026-05-28)
+### v1.1.0 (2026-05-27)
 - 📦 改用 Shadow + relocate 打包 Kotlin stdlib
 - 🛡️ 修复 GUI 物品防盗（InventoryHolder 模式）
 - 🌐 语言文件 messages.yml，支持国际化
 - 🔄 /zmg reload 命令重载配置文件
 - 🐛 调试模式控制台日志
 
-### v1.0.0 (2026-05-28)
+### v1.0.0 (2026-05-27)
 - 🎉 初始发布
 
 ## 贡献指南

@@ -82,10 +82,13 @@ object LyricDisplayManager {
 
     private fun showActionBar(player: Player, name: String, lyric: String, singer: String) {
         hideBossBar(player)
-        val text = if (lyric.isNotEmpty() && lyric != "%zmusic_playing_lyric%") {
-            "&b♪ &f$lyric &8| &7$singer &8- &7$name"
-        } else {
-            "&b♪ &f$name &8- &7$singer"
+        val hasLyric = lyric.isNotEmpty() && lyric != "%zmusic_playing_lyric%"
+        val format = Config.lyricDisplayFormat()
+
+        val text = when {
+            !hasLyric -> "&b♪ &f$name &8- &7$singer"
+            format == "LYRIC_SINGER" -> "&b♪ &f$lyric &8| &7$singer &8- &7$name"
+            else -> "&b♪ &f$lyric"
         }
         player.sendActionBar(ser.deserialize(text))
     }

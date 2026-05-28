@@ -12,10 +12,8 @@ object Config {
 
     fun load(plugin: ZMusicGUI) {
         file = File(plugin.dataFolder, "config.yml")
-        if (!file.exists()) {
-            plugin.dataFolder.mkdirs()
-            plugin.saveResource("config.yml", false)
-        }
+        plugin.dataFolder.mkdirs()
+        plugin.saveResource("config.yml", true)
         yaml = YamlConfiguration.loadConfiguration(file)
         Debug.info(">> 配置文件已挂载 (debug=${debug()})")
     }
