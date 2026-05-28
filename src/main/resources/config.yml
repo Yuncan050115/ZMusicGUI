@@ -1,0 +1,52 @@
+# ZMusicGUI v1.1.2 配置文件
+
+debug: false
+
+platforms:
+  netease:
+    enabled: true
+    name: "&c网易云音乐"
+    desc:
+      - "&c● &f华语 · 欧美 · 日韩 · 独立原创"
+      - "&7曲库最全，音质最佳"
+  qq:
+    enabled: true
+    name: "&aQQ 音乐"
+    desc:
+      - "&a● &f海量版权曲库"
+      - "&7热门综艺 & 影视 OST"
+  kugou:
+    enabled: true
+    name: "&9酷狗音乐"
+    desc:
+      - "&9● &f老歌经典 · 网络热歌"
+      - "&7KTV必点 · 车载必备"
+  kuwo:
+    enabled: true
+    name: "&e酷我音乐"
+    desc:
+      - "&e● &fDJ舞曲 · 车载音乐"
+      - "&7节奏控 · 嗨曲爱好者"
+  bilibili:
+    enabled: true
+    name: "&dBilibili"
+    desc:
+      - "&d● &fUP主原创 · 翻唱 · 二创"
+      - "&7B站特色内容"
+
+lyric:
+  default-enabled: true
+  default-mode: BOSSBAR
+  update-ticks: 10
+  # 显示行数: 1(仅当前句) / 2(歌词+歌手歌名)
+  display-lines: 1
+
+music:
+  cooldown-seconds: 5
+  # 是否启用全服点歌功能
+  public-request: true
+
+gui:
+  # 是否显示左下角作者信息
+  show-credits: true
+  main-menu-title: "&6&l☄ Ourcraft &8▸ &b音乐中心"

@@ -1,0 +1,26 @@
+name: ZMusicGUI
+version: "${version}"
+main: com.ourcraft.zmusicgui.ZMusicGUI
+api-version: "1.19"
+depend: [ZMusic]
+softdepend: [PlaceholderAPI]
+author: Yuncan
+website: https://yuncan.xyz
+description: A beautiful GUI for ZMusic plugin with lyric display engine
+
+commands:
+  zmusicgui:
+    description: 打开ZMusic点歌界面
+    usage: /<command>
+    aliases: [zmg, zmgui, zmui, dg, 点歌]
+
+permissions:
+  zmusicgui.use:
+    description: 允许使用ZMusicGUI基础功能
+    default: true
+  zmusicgui.admin:
+    description: 允许使用管理功能(全服播放/歌词设置/重载配置)
+    default: op
+  zmusicgui.bypass:
+    description: 绕过点歌冷却限制
+    default: false

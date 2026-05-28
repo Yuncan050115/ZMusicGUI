@@ -1,0 +1,165 @@
+# ZMusicGUI v1.1 语言文件 / Language File
+# 支持 & 颜色代码 / Supports & color codes
+
+prefix: "&b[ZMusicGUI]&r"
+
+# 控制台消息 / Console messages
+console:
+  enabling: ">> 正在初始化 ZMusicGUI v{version}..."
+  enabled: ">> ===== ZMusicGUI v{version} 初始化完成 ====="
+  disabling: ">> 正在关闭..."
+  disabled: ">> ZMusicGUI 已安全关闭"
+  zmusic-missing: "ZMusic 未安装! 插件已禁用."
+  zmusic-detected: ">> 检测到 ZMusic 插件"
+  config-loaded: ">> 配置文件已挂载 (debug={debug})"
+  config-reloaded: ">> 配置文件已重载"
+  settings-loaded: ">> 玩家设置系统已挂载"
+  lyric-mounted: ">> 歌词显示引擎已挂载 (PAPI={papi})"
+  events-registered: ">> 事件监听器已注册 (GuiListener + ChatListener)"
+  command-registered: ">> 命令 /zmg /点歌 /dg 已注册"
+
+# 玩家消息 / Player messages
+player:
+  no-permission: "&c你没有权限! 需要: {permission}"
+  no-permission-admin: "&c你需要 {permission} 权限!"
+  song-cancelled: "已取消"
+  song-prompt: "&a请在聊天栏输入 &e{prompt} &a，输入 &ccancel &a取消"
+  song-play-prompt: "歌名"
+  playlist-prompt: "歌单名称"
+  import-prompt: "歌单链接 (https://...)"
+  lyric-toggled: "&a歌词显示已{status}"
+  lyric-mode-changed: "&a显示模式已切换为: &e{mode}"
+  playback-stopped: "&e播放已停止"
+  zmusic-bossbar-toggled: "&aZMusic 原生 BossBar 已{status}"
+  enabled: "开启"
+  disabled: "关闭"
+
+# 命令 / Commands
+command:
+  zmusicgui:
+    description: "打开ZMusic点歌界面"
+    usage: "/<command>"
+    aliases: ["zmg", "zmgui", "zmui", "dg", "点歌"]
+  reload:
+    description: "重载ZMusicGUI配置文件"
+    usage: "/zmg reload"
+    success: "&a配置文件已重载!"
+    no-permission: "&c你需要 zmusicgui.admin 权限来重载配置!"
+
+# 权限 / Permissions
+permission:
+  use: "zmusicgui.use"
+  use-description: "允许使用ZMusicGUI基础功能"
+  admin: "zmusicgui.admin"
+  admin-description: "允许使用ZMusicGUI管理功能"
+  bypass: "zmusicgui.bypass"
+  bypass-description: "绕过点歌冷却限制"
+
+# GUI 界面文本 / GUI text
+gui:
+  main-title: "&6&l☄ Ourcraft &8▸ &b音乐中心"
+  search-title: "&6&l选择音乐平台"
+  playlist-title: "&6&l歌单管理"
+  control-title: "&6&l播放控制"
+  lyric-title: "&6&l歌词显示设置"
+  back: "&a← 返回主菜单"
+  close: "&c✕ 关闭菜单"
+
+  # 主菜单
+  main:
+    song-request: "&a&l🎵  点歌播放"
+    song-request-lore:
+      - "&7搜索歌曲 → 播放给自己听"
+      - "&7支持五大音乐平台"
+      - ""
+      - "&a▸ 点击开始点歌"
+    public-request: "&e&l📢  全服点歌"
+    public-request-lore:
+      - "&7分享歌曲给全服玩家"
+      - "&7大家点击聊天栏即可一起听"
+      - ""
+      - "&e▸ 点击开始全服点歌"
+    playlist: "&d&l📋  歌单管理"
+    playlist-lore:
+      - "&7查看、播放歌单"
+      - "&7个人歌单 & 全服歌单"
+      - ""
+      - "&d▸ 点击管理歌单"
+    control: "&6&l⏯  播放控制"
+    control-lore:
+      - "&7停止 / 当前播放信息"
+      - "&7实时歌曲进度 & 歌手"
+      - ""
+      - "&6▸ 点击查看播放状态"
+    lyric: "&b&l🎤  歌词显示"
+    lyric-lore:
+      - "&7自建歌词引擎 · PAPI驱动"
+      - "&7BossBar / ActionBar 模式"
+      - ""
+      - "&b▸ 点击设置歌词"
+    welcome: "&6&l☄ &e&lOurcraft 音乐中心 &6&l☄"
+    welcome-sub: "&7欢迎使用新一代点歌系统"
+    welcome-footer: "&7由 ZMusic 强力驱动"
+
+  # 搜索界面
+  search:
+    mode-personal: "&a个人播放"
+    mode-public: "&e全服点歌"
+    current-mode: "&f当前模式: {mode}"
+    mode-hint-personal: "&7只有你能听到音乐"
+    mode-hint-public: "&7分享到全服 · 大家点击聊天栏一起听"
+    select-hint: "&b▸ 点击选择此平台"
+
+  # 歌单界面
+  playlist:
+    my-playlists: "&a&l📖  查看我的歌单"
+    my-playlists-hint: "&7结果将显示在聊天栏"
+    global-playlists: "&e&l🌐  查看全服歌单"
+    global-playlists-hint: "&7结果将显示在聊天栏"
+    play-normal: "&a&l▶  顺序播放"
+    play-random: "&6&l🔀  随机播放"
+    play-loop: "&b&l🔁  循环播放"
+    play-prompt-hint: "&7点击后输入歌单名"
+    stop: "&c&l⏹  停止"
+
+  # 播放控制
+  control:
+    now-playing: "&b&l♪  正在播放"
+    not-playing: "&7&l♪  当前没有播放"
+    not-playing-hint: "&7使用点歌功能来播放一首吧!"
+    song-name: "&f歌名: &e{name}"
+    singer: "&f歌手: &d{singer}"
+    progress: "&f进度: &a{current} &7/ &a{max}"
+    source: "&f来源: &b{platform} &7- &f{source}"
+    lyric-preview: "&d&l📝  当前歌词"
+    stop-btn: "&c&l⏹  停止播放"
+    refresh: "&a&l🔄  刷新"
+    refresh-hint: "&7点击刷新播放状态"
+    lyric-toggle-on: "&a&l🎤  歌词: 开"
+    lyric-toggle-off: "&c&l🎤  歌词: 关"
+    lyric-toggle-hint-on: "&a当前: 开启"
+    lyric-toggle-hint-off: "&c当前: 关闭"
+    papi-missing: "&c需要安装 PlaceholderAPI"
+    lyric-quote: "&f\"{lyric}\""
+
+  # 歌词设置
+  lyric:
+    enabled: "&a&l✔  歌词显示: 开启"
+    disabled: "&c&l✘  歌词显示: 关闭"
+    mode-label: "&6&l🔄  显示模式"
+    mode-bossbar: "&bBossBar"
+    mode-actionbar: "&eActionBar"
+    current-mode: "&f当前: {mode}"
+    bossbar-item: "&d⬛  BossBar"
+    actionbar-item: "&e⬛  ActionBar"
+    active-indicator: "&b✔ 当前使用中"
+    zmusic-bossbar: "&8📝  ZMusic 原生 BossBar"
+    zmusic-bossbar-hint: "&7点击切换 (会执行 zm reload)"
+    refresh-item: "&a🔄  刷新状态"
+
+  # 分区标题
+  divider:
+    playlist: "歌单操作"
+    play-mode: "播放模式"
+    now-playing: "当前播放"
+    lyric-settings: "个人歌词设置"
