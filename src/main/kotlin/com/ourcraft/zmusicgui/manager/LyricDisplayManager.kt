@@ -67,13 +67,14 @@ object LyricDisplayManager {
         bar.isVisible = true
         bar.progress = 1.0
 
-        val lines = Config.lyricDisplayLines()
+        val hasLyric = lyric.isNotEmpty() && lyric != "%zmusic_playing_lyric%"
+        val format = Config.lyricDisplayFormat()
+
         val displayText = when {
-            lyric.isNotEmpty() && lyric != "%zmusic_playing_lyric%" -> {
-                if (lines == 1) "&b♪ &f$lyric"
-                else "&b♪ &f$lyric &8| &7$singer &8| &7$name"
-            }
-            else -> "&b♪ &f$name &8| &7$singer"
+            !hasLyric -> "&b♪ &f$name &8| &7$singer"
+            format == "LYRIC_SINGER" -> "&b♪ &f$lyric &8| &7$singer &8| &7$name"
+            // LYRIC is default: just current line
+            else -> "&b♪ &f$lyric"
         }
         val limited = if (displayText.length > 140) displayText.take(140) + "..." else displayText
         bar.setTitle(limited.color())

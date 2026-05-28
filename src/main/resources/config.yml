@@ -38,8 +38,12 @@ lyric:
   default-enabled: true
   default-mode: BOSSBAR
   update-ticks: 10
-  # 显示行数: 1(仅当前句) / 2(歌词+歌手歌名)
-  display-lines: 1
+  # 歌词显示格式:
+  #   LYRIC         — 仅当前句歌词 (默认)
+  #   LYRIC_SINGER  — 当前句 + 歌手 + 歌名
+  #   LYRIC_NEXT    — 当前句 + 下一句 (需ZMusic支持)
+  #   FULL          — 全部: 歌词 + 歌手 + 歌名 + 下一句
+  display-format: LYRIC
 
 music:
   cooldown-seconds: 5

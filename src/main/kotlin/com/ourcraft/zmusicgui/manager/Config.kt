@@ -41,7 +41,7 @@ object Config {
     fun lyricDefaultEnabled() = yaml.getBoolean("lyric.default-enabled", true)
     fun lyricDefaultMode() = yaml.getString("lyric.default-mode", "BOSSBAR")!!
     fun lyricUpdateTicks() = yaml.getLong("lyric.update-ticks", 10L)
-    fun lyricDisplayLines() = yaml.getInt("lyric.display-lines", 1)
+    fun lyricDisplayFormat() = yaml.getString("lyric.display-format", "LYRIC")!!
 
     fun cooldown() = yaml.getInt("music.cooldown-seconds", 5)
     fun publicRequestEnabled() = yaml.getBoolean("music.public-request", true)

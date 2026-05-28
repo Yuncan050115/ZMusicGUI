@@ -7,6 +7,7 @@ import com.ourcraft.zmusicgui.manager.Config
 import com.ourcraft.zmusicgui.manager.LyricDisplayManager
 import com.ourcraft.zmusicgui.manager.Messages
 import com.ourcraft.zmusicgui.manager.PlayerSettings
+import com.ourcraft.zmusicgui.metrics.Metrics
 import com.ourcraft.zmusicgui.util.Debug
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
@@ -52,6 +53,11 @@ class ZMusicGUI : JavaPlugin() {
         Debug.info(Messages.console("events-registered"))
 
         Debug.info(Messages.console("command-registered"))
+
+        // bStats metrics
+        val metrics = Metrics(this, 31635)
+        Debug.info(">> bStats 统计已挂载 (pluginId=31635)")
+
         Debug.info(Messages.console("enabled", "version" to "1.1"))
     }
 
