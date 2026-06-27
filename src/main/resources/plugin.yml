@@ -1,0 +1,27 @@
+name: ZMusicGUI
+version: "${version}"
+main: com.ourcraft.zmusicgui.ZMusicGUI
+api-version: '1.13'
+authors: [Yuncan]
+website: https://github.com/Yuncan050115
+description: ZMusicGUI - 多平台音乐 GUI 插件 (网易云/酷狗/酷我), 内置 Mod 通信
+folia-supported: true
+softdepend:
+  - Vault
+  - Residence
+  - PlotSquared
+commands:
+  zmusicgui:
+    description: 打开 ZMusicGUI 点歌界面
+    usage: /zmusicgui [reload|update|consent|reject|list|stop|mode]
+    aliases: [zmg, zmgui, zmui, dg, zm, 点歌]
+permissions:
+  zmusicgui.use:
+    default: true
+    description: ZMusicGUI 基础功能 (点歌/歌单/控制)
+  zmusicgui.admin:
+    default: op
+    description: ZMusicGUI 管理功能 (重载配置/全服播放/审批点歌)
+  zmusicgui.bypass:
+    default: false
+    description: 绕过点歌冷却

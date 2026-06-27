@@ -1,0 +1,15 @@
+.gradle/
+.idea/
+build/
+*.iml
+out/
+.classpath
+.project
+.settings/
+*.log
+*.lock
+
+# Internal development docs (not for public repo)
+DESIGN.md
+KNOWLEDGE_BASE.md
+docs/

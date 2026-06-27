@@ -1,0 +1,215 @@
+# ====================================================================
+# ZMusicGUI v2.1.0 语言文件
+# 支持 & 颜色代码
+# ====================================================================
+
+prefix: "&b[ZMusicGUI]&r"
+
+# ==================== 控制台消息 ====================
+console:
+  enabling: ">> 正在初始化 ZMusicGUI v{version}..."
+  enabled: ">> ===== ZMusicGUI v{version} 初始化完成 ====="
+  disabling: ">> 正在关闭..."
+  disabled: ">> ZMusicGUI 已安全关闭"
+  config-loaded: ">> 配置文件已挂载 (debug={debug})"
+  settings-loaded: ">> 玩家设置系统已挂载"
+  mod-channels-registered: ">> Mod 通信频道已注册 (allmusic + zmusic)"
+  lyric-mounted: ">> 歌词显示引擎已挂载 (MusicPlayer 直读)"
+  events-registered: ">> 事件监听器已注册 (GuiListener + ChatListener)"
+  command-registered: ">> 命令 /zmg /点歌 /dg 已注册"
+  bstats-mounted: ">> bStats 统计已挂载 (pluginId=31635)"
+  platform: ">> 运行平台: {platform}"
+  residence-detected: ">> Residence 已检测到, 支持领地范围播放"
+  plot-detected: ">> PlotSquared 已检测到, 支持地皮范围播放"
+  vault-detected: ">> Vault 经济系统已挂载: {econ}"
+  vault-missing: ">> Vault 未安装, 范围点歌不扣费"
+  update-latest: ">> 已是最新版本 (v{version})"
+  update-found: ">> 发现新版本: v{latest} (当前: v{version})"
+  update-url: ">> 下载地址: {url}"
+  update-failed: ">> 更新检查失败: {error}"
+
+# ==================== 玩家消息 ====================
+player:
+  no-permission: "&c你没有权限! 需要: {permission}"
+  no-permission-admin: "&c你需要 {permission} 权限!"
+  song-cancelled: "已取消"
+  song-prompt: "&a请在聊天栏输入 &e{prompt}&a, 输入 &ccancel &a取消"
+  song-play-prompt: "歌名"
+  account-token-prompt: "账号 Token (格式: userid=xxx; token=xxx)"
+  rename-prompt: "新的歌单名称 (输入空恢复原名)"
+  playlist-prompt: "歌单名称"
+  import-prompt: "歌单链接或 ID (https://music.163.com/playlist/... 或纯数字 ID)"
+  playlist-name-prompt: "歌单显示名称 (留空则使用原始名称)"
+  playlist-search-prompt: "歌单名称关键词 (如: 周杰伦 热门)"
+  lyric-toggled: "&a歌词显示已 {status}"
+  lyric-mode-changed: "&a显示模式已切换为: &e{mode}"
+  playback-stopped: "&e播放已停止"
+  enabled: "开启"
+  disabled: "关闭"
+  search-started: "&7正在搜索: &f{keyword}"
+  search-no-result: "&c未找到匹配的歌曲"
+  search-failed: "&c搜索失败: {error}"
+  playing: "&a正在播放: &f{name} &7- &f{singer}"
+  playing-with-scope: "&a已在 &f{scope} &a范围内为 &e{count} &a名玩家播放: &f{name}"
+  playlist-imported: "&a歌单已导入: &f{name} &7({count} 首)"
+  playlist-import-failed: "&c歌单导入失败: {error}"
+  playlist-not-found: "&c未找到该歌单"
+  cooldown: "&c请等待 &e{seconds} &c秒后再点歌"
+  cost-charged: "&7已扣费: &f{cost}"
+  cost-insufficient: "&c余额不足, 需要 &f{cost}"
+  request-sent: "&a已发送点歌请求, 等待管理者同意..."
+  request-accepted: "&a请求已通过! 正在播放..."
+  request-denied: "&c点歌请求已被拒绝"
+  request-timeout: "&c点歌请求已超时"
+  request-list: "&6待处理点歌请求 (&e{count}&6):"
+  request-item: "&7- &f{requester} &7→ &f{song} &8[{id}]"
+  request-action: "&7使用 &f/zmg accept [id] &7或 &f/zmg deny [id]"
+  approver-notified: "&6收到点歌请求:"
+  approver-info: "&7请求者: &f{requester} &7| 歌曲: &f{song} &7| 范围: &f{scope} &7| 费用: &f{cost}"
+  approver-action: "&a/zmg accept &7同意 | &c/zmg deny &7拒绝"
+  favorite-added: "&a已收藏歌单"
+  favorite-removed: "&7已取消收藏"
+  public-toggled-on: "&a歌单已公开"
+  public-toggled-off: "&7歌单已设为私密"
+  cant-favorite-own: "&c不能收藏自己的歌单"
+  website: "&a作者主页: &fhttps://github.com/Yuncan050115"
+
+# ==================== 命令 ====================
+command:
+  reload:
+    success: "&a配置文件已重载!"
+    no-permission: "&c你需要 zmusicgui.admin 权限来重载配置!"
+  update:
+    checking: "&7正在检查更新..."
+    latest: "&a已是最新版本 (v{version})"
+    found: "&e发现新版本: &fv{latest} &7(当前: v{version})"
+    url: "&7下载地址: &f{url}"
+    failed: "&c更新检查失败: {error}"
+  stop:
+    success: "&e播放已停止"
+    not-playing: "&7当前没有播放"
+  list:
+    empty: "&7当前没有待处理的点歌请求"
+
+# ==================== 权限 ====================
+permission:
+  use: "zmusicgui.use"
+  use-desc: "允许使用 ZMusicGUI 基础功能"
+  admin: "zmusicgui.admin"
+  admin-desc: "允许使用 ZMusicGUI 管理功能"
+  bypass: "zmusicgui.bypass"
+  bypass-desc: "绕过点歌冷却"
+
+# ==================== GUI 文本 ====================
+gui:
+  main:
+    title: "&6&l☄ Ourcraft &8▸ &b音乐中心"
+    quick-play: "&a&l🎵  快捷点歌"
+    quick-play-lore:
+      - "&7输入歌名即可播放"
+      - "&a个人 &7/&6领地 &7/&d地皮 &7/&b世界 &7/&e全服"
+      - ""
+      - "&a▸ 点击开始"
+    playlists: "&6&l📖  歌单"
+    playlists-lore:
+      - "&7统一展示所有歌单"
+      - "&a个人 &7(&e置顶&7) + &e收藏 &7(&e置顶&7) + &b全服"
+      - "&7新导入歌单默认隐私, 可右键切换公开"
+      - "&7支持链接和搜索两种方式导入"
+      - ""
+      - "&6▸ 点击查看"
+    control: "&d&l⏯  播放控制"
+    control-lore:
+      - "&7停止 / 当前播放信息"
+      - ""
+      - "&d▸ 点击查看"
+    settings: "&e&l⚙  个人设置"
+    settings-lore:
+      - "&7默认源 · 歌词设置"
+      - ""
+      - "&e▸ 点击设置"
+    welcome: "&6&l☄ &e&lOurcraft 音乐中心 &6&l☄"
+    welcome-sub: "&7内置 Mod 通信 · 网易云 API"
+    welcome-footer: "&7Author: Yuncan · Ourcraft"
+    location: "&e&l📍  当前位置"
+
+  quick-play:
+    title: "&6&l🎵 快捷点歌"
+    search: "&a&l⌨  搜索播放"
+    scope: "&f📍 播放范围"
+    source: "&f🎵 音乐源"
+    search-result: "&6&l搜索结果 &7({count} 首)"
+    play-this: "&a▸ 点击播放"
+
+  playlist:
+    title: "&6&l歌单浏览"
+    section-mine: "&a&l▼ 我的歌单 &7({count})"
+    section-favorites: "&e&l▼ 收藏歌单 &7({count})"
+    section-server: "&b&l▼ 全服歌单 &7({count})"
+    empty: "&7暂无歌单"
+    song-count: "&7歌曲: &f{count} 首"
+    platform: "&7平台: &f{platform}"
+    owner: "&7所有者: &f{owner}"
+    public: "&a✔ 已公开"
+    private: "&7🔒 私密"
+    favorite-marked: "&6⭐ 已收藏"
+    favorite-add-hint: "&7Shift+点击收藏"
+    public-toggle-hint: "&7右键切换公开/私密"
+    click-detail: "&a▸ 点击查看歌曲列表"
+    import: "&e➕ 导入歌单"
+    refresh: "&b🔄 刷新"
+    prev-page: "&a⬆ 上一页"
+    next-page: "&a⬇ 下一页"
+    page-info: "&7第 {current}/{total} 页"
+
+  detail:
+    play-all: "&a&l▶ 播放整个歌单"
+    play-song: "&a▸ 点击播放 (个人)"
+    song-name: "&f{name}"
+    song-singer: "&7歌手: &f{singer}"
+    song-time: "&7时长: &f{time}"
+    song-id: "&7ID: &8{id}"
+    favorite-add: "&6&l☆ 收藏歌单"
+    favorite-remove: "&6&l⭐ 取消收藏"
+
+  control:
+    now-playing: "&b&l♪  正在播放"
+    not-playing: "&7&l♪  当前没有播放"
+    not-playing-hint: "&7使用点歌功能来播放一首吧!"
+    song-name: "&f歌名: &e{name}"
+    singer: "&f歌手: &d{singer}"
+    progress: "&f进度: &a{current} &7/ &a{max}"
+    lyric-preview: "&d&l📝  当前歌词"
+    stop: "&c&l⏹  停止播放"
+    refresh: "&a&l🔄  刷新"
+    lyric-on: "&a&l🎤  歌词: 开"
+    lyric-off: "&c&l🎤  歌词: 关"
+
+  lyric:
+    enabled: "&a&l✔  歌词显示: 开启"
+    disabled: "&c&l✘  歌词显示: 关闭"
+    mode-label: "&6&l🔄  显示模式"
+    current-mode: "&f当前: {mode}"
+    bossbar: "&d⬛  BossBar"
+    actionbar: "&e⬛  ActionBar"
+    active: "&b✔ 当前使用中"
+    refresh: "&a🔄  刷新状态"
+
+  settings:
+    title: "&6&l⚙ 个人设置"
+    select-source: "&7选择常用音乐源, 第一个为默认"
+    source-selected: "&a已选"
+    source-unselected: "&7未选"
+    source-default: "&a★ 当前默认源"
+    keep-one: "&7至少保留一个"
+
+  common:
+    back: "&a← 返回主菜单"
+    back-hint: "&7点击回到主页"
+    close: "&c✕ 关闭菜单"
+    close-hint: "&7点击关闭"
+    loading: "&e&l加载中..."
+    loading-hint: "&7正在读取数据"
+    divider-playlist: "歌单操作"
+    divider-now-playing: "当前播放"
+    divider-lyric: "个人歌词设置"

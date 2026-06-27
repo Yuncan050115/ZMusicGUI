@@ -1,0 +1,51 @@
+# ZMusicGUI v2.5.0 配置文件
+# 作者: Yuncan (https://github.com/Yuncan050115)
+
+# Debug 模式
+debug: false
+
+# 聊天栏前缀
+prefix: "&b[ZMusicGUI]&r "
+
+# API 服务端地址 (强烈建议自行部署: https://github.com/Yuncan050115/ourcraft-music-api)
+api:
+  ourcraft: "https://music.yuncan.xyz"
+
+# 点歌
+music:
+  cost: 10
+  cooldown-seconds: 5
+  # 默认源: netease(免登录) / qq / kugou / kuwo
+  default-source: "netease"
+  search-limit: 10
+
+# 歌词
+lyric:
+  default-enabled: true
+  default-mode: "BOSSBAR"
+  update-ticks: 10
+  display-format: "LYRIC"
+
+# 播放范围
+scope:
+  approval-timeout-seconds: 30
+  self:       { cost: 1.0,  require-approval: false }
+  residence:  { cost: 20.0, require-approval: true }
+  plot:       { cost: 20.0, require-approval: true }
+  world:      { cost: 50.0, require-approval: true, payee-account: "" }
+  server:     { cost: 100.0, require-approval: true, payee-account: "" }
+
+# 歌单
+playlist:
+  default-private: true
+  cache-ttl-seconds: 30
+  songs-per-page: 21
+  history-limit: 200
+
+# GUI
+gui:
+  show-credits: true
+  main-menu-title: "&6&l☄ Ourcraft &8▸ &b音乐中心"
+  quick-play-title: "&6&l🎵 快捷点歌"
+  playlist-title: "&6&l歌单浏览"
+  control-title: "&6&l播放控制"
