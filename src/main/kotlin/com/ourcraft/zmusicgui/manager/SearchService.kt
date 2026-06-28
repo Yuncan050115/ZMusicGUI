@@ -5,7 +5,7 @@ import com.ourcraft.zmusicgui.util.Debug
 import org.bukkit.entity.Player
 
 /**
- * 统一搜索服务 v2.2.1 — 简化版
+ * 统一搜索服务 v3.0.0 — 简化版
  *
  * 直接调用 OurMusicApi, 不再做 when 分发。
  *
@@ -13,7 +13,6 @@ import org.bukkit.entity.Player
  *  - netease   网易云 (走 enhanced 模式, 自带解灰)
  *  - kugou     酷狗   (公开接口, 无需登录)
  *  - kuwo      酷我   (公开接口, 无需登录)
- *  - qq        QQ音乐 (vkey 接口 + VIP 跨平台解灰)
  *
  * 歌曲类型直接使用 OurMusicApi.Song / OurMusicApi.SongDetail。
  */
@@ -41,28 +40,25 @@ object SearchService {
         }
     }
 
-    /** 获取歌曲详情 (根据 Song 对象, 携带玩家账号 Token) */
+    /**
+     * 获取歌曲详情 (根据 Song 对象)
+     *
+     * player 参数保留兼容调用, 内部不再使用 (v3.0.0 起移除账号登录模块)。
+     */
     fun getSongDetail(song: OurMusicApi.Song, player: Player? = null): OurMusicApi.SongDetail? {
         return getSongDetailBySource(song.id, song.source, player)
     }
 
-    /** 按 ID + 来源获取详情 (携带玩家账号登录态用于 VIP 歌曲) */
+    /**
+     * 按 ID + 来源获取详情 (v3.0.0: 所有平台均不传登录态, 仅播放免费歌曲)
+     *
+     * player 参数保留兼容调用, 内部不再使用。
+     */
     fun getSongDetailBySource(id: String, source: String, player: Player? = null): OurMusicApi.SongDetail? {
         val src = normalizeSource(source)
         Debug.debug("[SearchService] 获取详情: id=$id source=$src player=${player?.name}")
-        // v2.5.0: 仅 QQ/网易云 支持账号登录 (酷狗/酷我 VIP 已下线)
-        // - QQ: 既传 uin+qqmusic_key (兼容旧服务端), 也传完整 cookie
-        // - 网易云: 传 cookie (服务端用 cookie 获取 VIP 歌曲)
-        // - 酷狗/酷我: 不传 cookie (VIP 已下线, 仅免费歌曲)
-        val acc = if (player != null) PlayerSettings.getAccount(player, src) else null
-        val (userId, token, cookie) = when {
-            acc == null -> Triple("", "", "")
-            src == "qq" -> Triple(acc.userId, acc.token, acc.cookie)
-            src == "netease" -> Triple(acc.userId, acc.token, acc.cookie)
-            else -> Triple("", "", "")
-        }
         return try {
-            OurMusicApi.getSongDetail(id, src, userId, token, cookie)
+            OurMusicApi.getSongDetail(id, src)
         } catch (e: Throwable) {
             Debug.warn("[SearchService] 获取详情失败 [$src/$id]: ${e.message}")
             null
@@ -106,7 +102,6 @@ object SearchService {
         "netease" -> "&c网易云"
         "kugou" -> "&a酷狗"
         "kuwo" -> "&6酷我"
-        "qq" -> "&dQQ音乐"
         else -> source
     }
 
@@ -115,12 +110,11 @@ object SearchService {
         "netease" -> "网易云"
         "kugou" -> "酷狗"
         "kuwo" -> "酷我"
-        "qq" -> "QQ音乐"
         else -> source
     }
 
-    /** 所有可用的平台 */
-    val SUPPORTED_SOURCES = listOf("netease", "kugou", "kuwo", "qq")
+    /** 所有可用的平台 (qq 仅在 normalizeSource 中保留兼容映射, 不再作为可用源) */
+    val SUPPORTED_SOURCES = listOf("netease", "kugou", "kuwo")
 
     /** 支持歌单搜索的平台 */
     val PLAYLIST_SEARCH_SOURCES = listOf("netease", "kugou")

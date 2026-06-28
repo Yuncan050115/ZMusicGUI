@@ -190,7 +190,7 @@ object PlaylistPushGui : ZGui {
     }
 
     /** 异步加载歌单并为玩家播放 — 懒加载模式 (只加载第一首, 后续切歌时按需加载) */
-    fun startPlaylistForPlayer(player: Player, playlist: AggregatedPlaylist, requester: Player) {
+    fun startPlaylistForPlayer(player: Player, playlist: AggregatedPlaylist) {
         val source = playlist.platform
         val songs = playlist.songs
         if (songs.isEmpty()) return
@@ -199,7 +199,7 @@ object PlaylistPushGui : ZGui {
             // 懒加载: 只加载第一首歌的详情, 后续歌曲切歌时由 MusicPlayer 按需加载
             // (避免大量并发请求压垮服务端, 也避免歌单开始前的长时间等待)
             val firstSong = songs[0]
-            val firstDetail = try { SearchService.getSongDetailBySource(firstSong.id, source, requester) } catch (_: Throwable) { null }
+            val firstDetail = try { SearchService.getSongDetailBySource(firstSong.id, source, player) } catch (_: Throwable) { null }
 
             if (firstDetail == null || firstDetail.url.isEmpty()) {
                 SchedulerUtil.runSync(ZMusicGUI.plugin, Runnable {

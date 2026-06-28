@@ -6,13 +6,21 @@ import com.ourcraft.zmusicgui.manager.Messages
 import com.ourcraft.zmusicgui.manager.PlayerSettings
 import com.ourcraft.zmusicgui.manager.SearchService
 import com.ourcraft.zmusicgui.music.MusicPlayer
-import com.ourcraft.zmusicgui.util.Debug
 import com.ourcraft.zmusicgui.util.Items
 import com.ourcraft.zmusicgui.util.SchedulerUtil
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * 播放控制 GUI v2.5.4 — 精简版
+ *
+ * v2.5.4: 精简按钮
+ *  - 移除歌词预览 (BossBar 已显示歌词)
+ *  - 移除歌词开关 (BossBar 默认开启)
+ *  - 移除刷新按钮 (已有自动刷新)
+ *  - 当前播放信息含进度和优先队列状态
+ */
 object ControlGui : ZGui {
 
     private val refreshTasks = ConcurrentHashMap<Player, Any>()
@@ -23,10 +31,7 @@ object ControlGui : ZGui {
     private const val SLOT_MODE = 23
     private const val SLOT_PLAYLIST = 24
     private const val SLOT_NOW = 13
-    private const val SLOT_LYRIC = 14
-    private const val SLOT_LYRIC_TOGGLE = 30
-    private const val SLOT_REFRESH = 31
-    private const val SLOT_BACK = 32
+    private const val SLOT_BACK = 31
 
     override fun open(player: Player) {
         refreshTasks.remove(player)?.let { SchedulerUtil.cancelTask(it) }
@@ -57,28 +62,24 @@ object ControlGui : ZGui {
             val cur = formatTime(state.currentTime)
             val max = formatTime(state.song.time)
             val sourceName = SearchService.sourcePlainName(state.song.source)
+            val prioritySize = state.priorityQueue.size
+            val queueSize = state.playlistQueue.size
+
             inv.setItem(SLOT_NOW, Items.build(Material.MUSIC_DISC_13,
                 Messages.gui("control.now-playing"),
                 Messages.gui("control.song-name", "name" to state.song.name),
                 Messages.gui("control.singer", "singer" to state.song.singer),
                 Messages.gui("control.progress", "current" to cur, "max" to max),
-                "&7平台: &f$sourceName"))
+                "&7平台: &f$sourceName",
+                if (prioritySize > 0) "&a下一首队列: &f$prioritySize 首" else "",
+                if (queueSize > 0) "&7播放队列: &f${state.playlistIndex + 1}/$queueSize" else ""))
 
-            val lyricIdx = state.lastLyricIndex
-            if (lyricIdx >= 0 && lyricIdx < state.lyrics.size) {
-                val lyric = state.lyrics[lyricIdx].text
-                if (lyric.isNotEmpty() && lyric.length < 60) {
-                    inv.setItem(SLOT_LYRIC, Items.build(Material.PAPER,
-                        Messages.gui("control.lyric-preview"), "&f\"$lyric\""))
-                }
-            }
-
-            val queueSize = state.playlistQueue.size
-            if (queueSize > 1) {
+            val hasQueue = queueSize > 1 || prioritySize > 0
+            if (hasQueue) {
                 inv.setItem(SLOT_PREV, Items.build(Material.ARROW, "&a◀ 上一首",
-                    "&7队列: &f${state.playlistIndex + 1}/$queueSize"))
+                    if (state.historyStack.isNotEmpty()) "&7历史回退: &f${state.historyStack.size} 首" else "&7无历史记录"))
                 inv.setItem(SLOT_NEXT, Items.build(Material.ARROW, "&a下一首 ▶",
-                    "&7队列: &f${state.playlistIndex + 1}/$queueSize"))
+                    if (prioritySize > 0) "&a下一首队列: &f$prioritySize 首" else "&7队列: &f${state.playlistIndex + 1}/$queueSize"))
             } else {
                 inv.setItem(SLOT_PREV, Items.build(Material.GRAY_STAINED_GLASS_PANE, "&7上一首",
                     "&c当前无播放队列"))
@@ -86,10 +87,10 @@ object ControlGui : ZGui {
                     "&c当前无播放队列"))
             }
 
-            if (queueSize > 0) {
+            if (queueSize > 0 || prioritySize > 0) {
                 inv.setItem(SLOT_PLAYLIST, Items.build(Material.CHEST, "&6📋 播放列表",
-                    "&7队列共 &f${queueSize} &7首",
-                    "&7当前: &f${state.playlistIndex + 1}",
+                    if (queueSize > 0) "&7播放队列: &f${queueSize} 首 &7(当前: ${state.playlistIndex + 1})" else "",
+                    if (prioritySize > 0) "&a下一首队列: &f$prioritySize 首" else "",
                     "",
                     "&a▸ 点击查看播放列表"))
             }
@@ -114,14 +115,7 @@ object ControlGui : ZGui {
             "&7当前: ${modeEnum.display}",
             "&7点击循环切换"))
 
-        val s = PlayerSettings.getSettings(player)
-        inv.setItem(SLOT_LYRIC_TOGGLE, Items.build(
-            if (s.lyricEnabled) Material.LIME_DYE else Material.GRAY_DYE,
-            if (s.lyricEnabled) Messages.gui("control.lyric-on") else Messages.gui("control.lyric-off"),
-            "&7点击切换"))
-
         if (Config.showCredits()) inv.setItem(27, Items.credits())
-        inv.setItem(SLOT_REFRESH, Items.build(Material.EMERALD, Messages.gui("control.refresh"), "&a点击立即刷新"))
         inv.setItem(SLOT_BACK, Items.back())
 
         player.openInventory(inv)
@@ -132,13 +126,13 @@ object ControlGui : ZGui {
 
         when (slot) {
             SLOT_PREV -> {
-                if (MusicPlayer.getState(player)?.playlistQueue?.isNotEmpty() == true) {
+                if (MusicPlayer.getState(player) != null) {
                     MusicPlayer.playPrev(player)
                     render(player)
                 }
             }
             SLOT_NEXT -> {
-                if (MusicPlayer.getState(player)?.playlistQueue?.isNotEmpty() == true) {
+                if (MusicPlayer.getState(player) != null) {
                     MusicPlayer.playNext(player)
                     render(player)
                 }
@@ -158,14 +152,7 @@ object ControlGui : ZGui {
             SLOT_PLAYLIST -> {
                 showPlaylistQueue(player)
             }
-            SLOT_LYRIC_TOGGLE -> {
-                val s = PlayerSettings.getSettings(player)
-                PlayerSettings.setLyricEnabled(player, !s.lyricEnabled)
-                val status = if (!s.lyricEnabled) Messages.player("enabled") else Messages.player("disabled")
-                player.sendMessage(Items.color("${Messages.prefix()} ${Messages.player("lyric-toggled", "status" to status)}"))
-                render(player)
-            }
-            SLOT_NOW, SLOT_LYRIC, 24, SLOT_REFRESH -> render(player)
+            SLOT_NOW -> render(player)
             27 -> MainGui.openWebsite(player)
             SLOT_BACK -> MainGui.open(player)
         }
@@ -174,7 +161,8 @@ object ControlGui : ZGui {
     private fun showPlaylistQueue(player: Player) {
         val state = MusicPlayer.getState(player) ?: return
         val queue = state.playlistQueue
-        if (queue.isEmpty()) {
+        val priority = state.priorityQueue
+        if (queue.isEmpty() && priority.isEmpty()) {
             player.sendMessage(Items.color("${Messages.prefix()} &7当前没有播放队列"))
             return
         }
@@ -182,22 +170,39 @@ object ControlGui : ZGui {
         player.closeInventory()
         val p = Messages.prefix()
         player.sendMessage(Items.color("$p &6━━━ 播放列表 ━━━"))
-        val start = (state.playlistIndex - 4).coerceAtLeast(0)
-        val end = minOf(queue.size, start + 10)
-        for (i in start until end) {
-            val song = queue[i]
-            val marker = if (i == state.playlistIndex) "&a▶ 当前" else "&7${i + 1}"
-            val sourceTag = when (song.source) {
-                "netease" -> "&c[网易云]"
-                "kugou" -> "&a[酷狗]"
-                "kuwo" -> "&6[酷我]"
-                "qq" -> "&d[QQ]"
-                else -> "&7[${song.source}]"
+
+        // 优先队列 (下一首播放)
+        if (priority.isNotEmpty()) {
+            player.sendMessage(Items.color("$p &a▼ 下一首播放队列 (&f${priority.size}&a):"))
+            priority.forEachIndexed { i, song ->
+                val sourceTag = sourceTag(song.source)
+                player.sendMessage(Items.color("$p &a${i + 1} &f${song.name} &7- &f${song.singer} $sourceTag"))
             }
-            player.sendMessage(Items.color("$p $marker &f${song.name} &7- &f${song.singer} $sourceTag"))
         }
-        player.sendMessage(Items.color("$p &7共 &f${queue.size} &7首, 当前第 &f${state.playlistIndex + 1} &7首"))
+
+        // 播放队列
+        if (queue.isNotEmpty()) {
+            player.sendMessage(Items.color("$p &7▼ 播放队列 (&f${queue.size}&7):"))
+            val start = (state.playlistIndex - 4).coerceAtLeast(0)
+            val end = minOf(queue.size, start + 10)
+            for (i in start until end) {
+                val song = queue[i]
+                val marker = if (i == state.playlistIndex) "&a▶ 当前" else "&7${i + 1}"
+                val sourceTag = sourceTag(song.source)
+                player.sendMessage(Items.color("$p $marker &f${song.name} &7- &f${song.singer} $sourceTag"))
+            }
+            player.sendMessage(Items.color("$p &7共 &f${queue.size} &7首, 当前第 &f${state.playlistIndex + 1} &7首"))
+        }
+
         render(player)
+    }
+
+    private fun sourceTag(source: String): String = when (source) {
+        "netease" -> "&c[网易云]"
+        "kugou" -> "&a[酷狗]"
+        "kuwo" -> "&6[酷我]"
+        "qq" -> "&d[QQ]"
+        else -> "&7[$source]"
     }
 
     fun cleanup(player: Player) {

@@ -1,6 +1,6 @@
 # ZMusicGUI
 
-[![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)](https://github.com/Yuncan050115/ZMusicGUI)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/Yuncan050115/ZMusicGUI)
 [![Paper](https://img.shields.io/badge/Paper-1.13--1.21-green.svg)](https://papermc.io)
 [![Folia](https://img.shields.io/badge/Folia-supported-success.svg)](https://papermc.io/software/folia)
 [![License](https://img.shields.io/badge/license-GPL--3.0-orange.svg)](LICENSE)
@@ -12,8 +12,7 @@
 
 ## 功能
 
-- **多平台点歌**: 网易云(免登录) / QQ音乐 / 酷狗 / 酷我
-- **VIP 歌曲播放**: QQ音乐 Cookie 登录 / 网易云扫码登录
+- **多平台点歌**: 网易云 / 酷狗 / 酷我 (免登录, 仅免费歌曲)
 - **歌单管理**: 网易云/酷狗歌单搜索、导入、收藏；个人/全服公开双区
 - **播放范围**: 个人 / 领地 / 地皮 / 世界 / 全服 (Residence + PlotSquared 自动检测)
 - **歌词同步**: BossBar / ActionBar，每秒更新
@@ -21,42 +20,7 @@
 - **全服点歌**: 搜索歌曲分享给全服玩家
 - **Folia 兼容**: 自动检测 RegionizedServer，跨平台调度
 
-## 账号绑定 (v2.5.0)
-
-v2.5.0 起仅支持 **QQ音乐** 和 **网易云** 两个平台登录 (酷狗/酷我 VIP 已下线，原因见 [更新日志](#更新日志))。
-
-### QQ音乐 — F12 Cookie 登录
-
-| 字段 | 格式 | 有效期 |
-|------|------|--------|
-| `uin` | QQ号 | 30天 |
-| `qqmusic_key` | 登录凭证 (Q_H_L_开头) | 30天 |
-
-**绑定流程**:
-1. 浏览器登录 [y.qq.com](https://y.qq.com/)
-2. 按 `F12` 打开控制台，输入 `copy(document.cookie)` 回车
-3. 打开绑定页 `{api地址}/bind`，选择 QQ音乐，粘贴 Cookie
-4. 网页显示 6 位绑定码，回游戏输入绑定码
-
-**或** 直接在游戏聊天栏粘贴 `uin|qqmusic_key` 格式 (用 `|` 分隔)。
-
-### 网易云 — 扫码登录
-
-| 字段 | 获取方式 | 有效期 |
-|------|----------|--------|
-| `MUSIC_U` | 网页扫码 | 30天 |
-
-**绑定流程**:
-1. 打开绑定页 `{api地址}/bind`，选择 网易云
-2. 点击"生成二维码"，用网易云 APP 扫码
-3. 手机确认登录后，网页显示 6 位绑定码
-4. 回游戏输入绑定码
-
-> 网易云未绑定也可播放免费歌曲；绑定后可播放 VIP 歌曲 (兜底方案)。
-
-### 酷狗/酷我
-
-酷狗/酷我**仍可搜索和播放免费歌曲**，但 VIP 歌曲无法在服务器获取 (token 绑浏览器 IP)，请使用网易云兜底。
+> v3.0.0 起移除账号登录模块 (QQ/网易云 VIP 登录已删除), 仅播放免费歌曲。VIP 歌曲无法播放, 请尝试切换其他源或歌曲。
 
 ## 命令
 
@@ -88,7 +52,7 @@ LuckPerms 示例:
 `plugins/ZMusicGUI/config.yml`:
 
 ```yaml
-# ZMusicGUI v2.5.0 配置文件
+# ZMusicGUI v3.0.0 配置文件
 debug: false
 prefix: "&b[ZMusicGUI]&r "
 
@@ -100,7 +64,7 @@ api:
 music:
   cost: 10                    # 点歌费用
   cooldown-seconds: 5         # 点歌冷却
-  default-source: "netease"   # 默认源: netease/qq/kugou/kuwo
+  default-source: "netease"   # 默认源: netease/kugou/kuwo
   search-limit: 10            # 搜索结果数量
 
 # 歌词
@@ -166,7 +130,7 @@ gui:
 git clone https://github.com/Yuncan050115/ZMusicGUI.git
 cd ZMusicGUI
 ./gradlew shadowJar
-# 输出: build/libs/ZMusicGUI-2.5.0.jar
+# 输出: build/libs/ZMusicGUI-3.0.0.jar
 ```
 
 **要求**: JDK 21+, Kotlin 2.1.20, Gradle 9.x + Shadow
@@ -175,17 +139,25 @@ cd ZMusicGUI
 
 使用 [ourcraft-music-api](https://github.com/Yuncan050115/ourcraft-music-api) 作为后端:
 
-- 网易云: enhanced 模式，免登录可播放免费歌曲，扫码登录可播放 VIP 歌曲
-- QQ音乐: cookie 透传 (uin + qqmusic_key)，vkey 接口获取 VIP purl
+- 网易云: enhanced 模式，免登录可播放免费歌曲
 - 酷狗/酷我: 公开接口，仅免费歌曲
-
-绑定页面: `{api地址}/bind`
 
 ## bStats
 
 本插件使用 [bStats](https://bstats.org/plugin/bukkit/ZMusicGUI/31635) 收集匿名使用数据。可在 `plugins/bStats/config.yml` 中关闭。
 
 ## 更新日志
+
+### v3.0.0 (2026-06-28)
+- 🗑️ **移除账号登录模块** — VIP 登录无法实现, 彻底删除账号绑定/扫码登录相关代码
+- 🗑️ 移除 QQ 音乐源支持 (SUPPORTED_SOURCES 不再包含 qq, normalizeSource 保留 qq→qq 兼容映射)
+- 🗑️ 删除 AccountManager / AccountGui / BindResult / verifyBindCode 等登录相关组件
+- 🗑️ 移除 PlayerSettings 中的 accounts 字段及 getAccount/setAccount/removeAccount/hasAccount 方法
+- ♻️ 简化 OurMusicApi.getSongDetail 签名 (移除 userId/token/cookie 参数)
+- ♻️ 简化 SearchService.getSongDetailBySource (内部不再读取账号登录态)
+- ♻️ 简化点歌失败提示为 "歌曲暂时无法播放, 请尝试其他源或歌曲"
+- ♻️ PlaylistPushGui.startPlaylistForPlayer 移除 requester 参数
+- 📝 更新 README, 移除账号绑定章节
 
 ### v2.5.0 (2026-06-28)
 - 🗑️ **移除酷狗/酷我账号登录** — 服务器 IP 无法获取 VIP URL (token 绑浏览器 IP)

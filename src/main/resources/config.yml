@@ -1,4 +1,4 @@
-# ZMusicGUI v2.5.0 配置文件
+# ZMusicGUI v3.0.0 配置文件
 # 作者: Yuncan (https://github.com/Yuncan050115)
 
 # Debug 模式
@@ -15,7 +15,7 @@ api:
 music:
   cost: 10
   cooldown-seconds: 5
-  # 默认源: netease(免登录) / qq / kugou / kuwo
+  # 默认源: netease / kugou / kuwo (v3.0.0 起仅支持这 3 个免费源)
   default-source: "netease"
   search-limit: 10
 

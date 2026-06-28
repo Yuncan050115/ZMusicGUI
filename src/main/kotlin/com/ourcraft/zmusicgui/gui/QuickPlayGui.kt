@@ -288,22 +288,7 @@ object QuickPlayGui : ZGui {
             }
             if (detail == null || detail.url.isEmpty()) {
                 SchedulerUtil.runSync(ZMusicGUI.plugin, Runnable {
-                    // VIP 歌曲检测提示
-                    val source = song.source
-                    val platformName = SearchService.sourceName(source)
-                    player.sendMessage(Items.color("${Messages.prefix()} &c获取歌曲播放地址失败"))
-                    player.sendMessage(Items.color("${Messages.prefix()} &7该歌曲可能为 &eVIP 歌曲 &7, 需要 ${platformName} &7会员账号"))
-                    // v2.5.0: 酷狗/酷我 VIP 已下线, 提示用网易云兜底
-                    if (source == "kugou" || source == "kuwo") {
-                        player.sendMessage(Items.color("${Messages.prefix()} &7${platformName} &7VIP 已下线, 请切换到 &c网易云 &7搜索播放"))
-                    } else if (source == "qq" || source == "netease") {
-                        val bound = PlayerSettings.hasAccount(player, source)
-                        if (!bound) {
-                            player.sendMessage(Items.color("${Messages.prefix()} &7请前往 &f设置 → 账号管理 &7绑定 ${platformName} &7账号"))
-                        } else {
-                            player.sendMessage(Items.color("${Messages.prefix()} &7账号已绑定但仍无法播放, Token 可能已过期"))
-                        }
-                    }
+                    player.sendMessage(Items.color("${Messages.prefix()} &c歌曲暂时无法播放, 请尝试其他源或歌曲"))
                 })
                 return@Runnable
             }

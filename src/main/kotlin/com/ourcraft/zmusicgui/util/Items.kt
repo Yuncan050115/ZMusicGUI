@@ -42,7 +42,7 @@ object Items {
     }
 
     fun back(): ItemStack = build(
-        Material.ARROW,
+        Material.OAK_DOOR,
         "&a← 返回主菜单",
         "&7点击回到主页"
     )

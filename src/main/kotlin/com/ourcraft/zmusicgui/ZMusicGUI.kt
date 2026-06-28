@@ -22,12 +22,12 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * ZMusicGUI v2.2.1 — Ourcraft Yuncan
+ * ZMusicGUI v3.0.0 — Ourcraft Yuncan
  *
  * 通过 OurMusicApi (服务端 ourcraft-music-api) 调用多平台音乐接口,
  * 自带 Mod 通信、播放与歌词同步。
  *
- * 支持平台: netease / kugou / kuwo / qq
+ * 支持平台: netease / kugou / kuwo
  * 只需客户端安装 ZMusic Mod 即可播放音乐。
  */
 class ZMusicGUI : JavaPlugin() {
@@ -35,7 +35,7 @@ class ZMusicGUI : JavaPlugin() {
     companion object {
         lateinit var plugin: ZMusicGUI
             private set
-        private const val CURRENT_VERSION = "2.5.0"
+        private const val CURRENT_VERSION = "3.0.0"
         private const val GITHUB_API = "https://api.github.com/repos/Yuncan050115/ZMusicGUI/releases/latest"
     }
 
@@ -317,27 +317,24 @@ class ZMusicGUI : JavaPlugin() {
             com.ourcraft.zmusicgui.manager.PlayerSettings.setPlayMode(player, "sequence")
         }
 
-        // 查找推送者 (用于携带 Token)
-        val pusher = org.bukkit.Bukkit.getPlayerExact(pusherName)
-
         // 异步查找歌单并播放
         com.ourcraft.zmusicgui.util.SchedulerUtil.runAsync(plugin, Runnable {
             // 从 PlaylistManager 获取歌单 (查找推送者的公开歌单)
-            val playlist = findPlaylistForPush(playlistId, platform, pusherName, pusher)
+            val playlist = findPlaylistForPush(playlistId, platform, pusherName)
             if (playlist == null) {
                 com.ourcraft.zmusicgui.util.SchedulerUtil.runSync(plugin, Runnable {
                     player.sendMessage(color("${Messages.prefix()} &c未找到推送的歌单 (可能已被删除)"))
                 })
                 return@Runnable
             }
-            com.ourcraft.zmusicgui.gui.PlaylistPushGui.startPlaylistForPlayer(player, playlist, pusher ?: player)
+            com.ourcraft.zmusicgui.gui.PlaylistPushGui.startPlaylistForPlayer(player, playlist)
         })
         return true
     }
 
     /** 查找用于推送的歌单 (优先全局/公开歌单) */
     private fun findPlaylistForPush(
-        playlistId: String, platform: String, pusherName: String, pusher: Player?
+        playlistId: String, platform: String, pusherName: String
     ): com.ourcraft.zmusicgui.manager.PlaylistManager.AggregatedPlaylist? {
         // 读取推送者的歌单文件
         val file = java.io.File(dataFolder, "playlist/${pusherName}.yml")

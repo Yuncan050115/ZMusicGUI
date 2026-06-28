@@ -13,6 +13,10 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.event.ClickEvent
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
+import org.bukkit.Bukkit
+import org.bukkit.boss.BarColor
+import org.bukkit.boss.BarStyle
+import org.bukkit.boss.BossBar
 import org.bukkit.entity.Player
 import java.util.concurrent.ConcurrentHashMap
 
@@ -58,7 +62,14 @@ object MusicPlayer {
         var playlistQueue: MutableList<OurMusicApi.SongDetail> = mutableListOf(),
         var playlistIndex: Int = 0,
         // 是否为临时打断播放 (搜索点歌)
-        var isTemporary: Boolean = false
+        var isTemporary: Boolean = false,
+        // v2.5.0: 手动推送队列 (优先级高于随机/顺序播放)
+        // pushToQueue 添加到这里, onSongEnd 优先消费此队列
+        var priorityQueue: MutableList<OurMusicApi.SongDetail> = mutableListOf(),
+        // 播放历史栈 (用于"上一首"在随机模式下回退到实际上一首)
+        var historyStack: MutableList<OurMusicApi.SongDetail> = mutableListOf(),
+        // v2.5.4: BossBar 歌词显示 (默认开启)
+        var bossBar: BossBar? = null
     )
 
     private val states = ConcurrentHashMap<Player, PlayState>()
@@ -69,7 +80,10 @@ object MusicPlayer {
         // 保留已有的 playlistQueue, 临时播放后恢复
         val savedQueue = states[player]?.playlistQueue ?: mutableListOf()
         val savedIndex = states[player]?.playlistIndex ?: 0
-        startPlay(player, song, savedQueue, savedIndex, isTemporary = true)
+        val savedPriority = states[player]?.priorityQueue ?: mutableListOf()
+        val savedHistory = states[player]?.historyStack ?: mutableListOf()
+        startPlay(player, song, savedQueue, savedIndex, isTemporary = true,
+            priorityQueue = savedPriority, historyStack = savedHistory)
         // 异步记录到玩家的点歌历史 (不阻塞播放)
         PlaylistManager.recordHistory(player, song)
     }
@@ -78,19 +92,27 @@ object MusicPlayer {
     fun playPlaylist(player: Player, queue: MutableList<OurMusicApi.SongDetail>, startIndex: Int) {
         if (queue.isEmpty()) return
         val song = queue[startIndex]
-        startPlay(player, song, queue, startIndex, isTemporary = false)
+        // 重置优先队列和历史栈 (新歌单开始)
+        startPlay(player, song, queue, startIndex, isTemporary = false,
+            priorityQueue = mutableListOf(), historyStack = mutableListOf())
     }
 
     /** 内部: 启动播放 */
     private fun startPlay(player: Player, song: OurMusicApi.SongDetail,
                           playlistQueue: MutableList<OurMusicApi.SongDetail>,
                           playlistIndex: Int, isTemporary: Boolean,
-                          notify: Boolean = false) {
+                          notify: Boolean = false,
+                          priorityQueue: MutableList<OurMusicApi.SongDetail> = mutableListOf(),
+                          historyStack: MutableList<OurMusicApi.SongDetail> = mutableListOf(),
+                          skipHistoryPush: Boolean = false) {
         // 懒加载: 如果 url 为空 (歌单懒加载的后续歌曲), 异步获取详情后再播放
         if (song.url.isEmpty() && song.id.isNotEmpty()) {
             player.sendMessage(Items.color("${Messages.prefix()} &7正在加载: &f${song.name}..."))
             val queueRef = playlistQueue
             val idxRef = playlistIndex
+            val prioRef = priorityQueue
+            val histRef = historyStack
+            val skipRef = skipHistoryPush
             SchedulerUtil.runAsync(ZMusicGUI.plugin, Runnable {
                 val detail = try { SearchService.getSongDetailBySource(song.id, song.source, player) } catch (_: Throwable) { null }
                 SchedulerUtil.runSync(ZMusicGUI.plugin, Runnable {
@@ -100,12 +122,15 @@ object MusicPlayer {
                         if (idxRef in queueRef.indices) queueRef[idxRef] = detail
                         detail
                     } else song  // 用原 song (url 为空, 会提示错误)
-                    startPlay(player, finalDetail, queueRef, idxRef, isTemporary, notify)
+                    startPlay(player, finalDetail, queueRef, idxRef, isTemporary, notify, prioRef, histRef, skipRef)
                 })
             })
             return
         }
 
+        // v2.5.1: 在 stop 之前捕获当前歌曲, 用于压入历史栈
+        // (stop 会移除 states[player], 必须先读取)
+        val prevSong = states[player]?.song
         stop(player)
 
         // url 为空且无 id → 无法播放
@@ -116,13 +141,39 @@ object MusicPlayer {
             return
         }
 
+        // v2.5.1: 把当前歌曲压入历史栈 (用于上一首回退)
+        // skipHistoryPush=true 时跳过 (playPrev 从历史栈弹出歌曲时, 不把当前歌曲压回栈, 避免循环)
+        if (!skipHistoryPush && prevSong != null) {
+            if (prevSong.id != song.id || prevSong.source != song.source) {
+                historyStack.add(prevSong)
+                if (historyStack.size > 50) historyStack.removeAt(0)
+            }
+        }
+
         val lyrics = parseLyrics(song.lyric)
-        val state = PlayState(song, 0, lyrics, -1, playlistQueue, playlistIndex, isTemporary)
+        val state = PlayState(song, 0, lyrics, -1, playlistQueue, playlistIndex, isTemporary,
+            priorityQueue = priorityQueue, historyStack = historyStack)
         states[player] = state
+
+        // v2.5.4: 创建 BossBar 显示歌词 (默认开启)
+        val barColor = when (song.source) {
+            "netease" -> BarColor.RED
+            "qq" -> BarColor.PINK
+            "kugou" -> BarColor.GREEN
+            "kuwo" -> BarColor.YELLOW
+            else -> BarColor.BLUE
+        }
+        val bossBar = Bukkit.createBossBar(
+            Items.color("&f${song.name} &7- &f${song.singer}"),
+            barColor, BarStyle.SOLID
+        )
+        bossBar.progress = 0.0
+        bossBar.addPlayer(player)
+        state.bossBar = bossBar
 
         // 发送播放指令
         ModChannel.play(player, song.url)
-        Debug.debug("播放: ${player.name} - ${song.name} (url=${song.url.take(50)}...) playlistSize=${playlistQueue.size} idx=$playlistIndex temp=$isTemporary")
+        Debug.debug("播放: ${player.name} - ${song.name} (url=${song.url.take(50)}...) playlistSize=${playlistQueue.size} idx=$playlistIndex temp=$isTemporary priority=${priorityQueue.size}")
 
         // 歌单切换通知: 发送歌曲信息 + [结束][推送] 按钮
         if (notify) {
@@ -144,6 +195,22 @@ object MusicPlayer {
             if (lyricIdx >= 0 && lyricIdx != s.lastLyricIndex) {
                 s.lastLyricIndex = lyricIdx
                 ModChannel.sendLyric(player, s.lyrics[lyricIdx].text)
+            }
+
+            // v2.5.4: 更新 BossBar (歌词 + 进度)
+            val bar = s.bossBar
+            if (bar != null) {
+                // 标题: 当前歌词行 (无歌词时显示歌曲名)
+                val title = if (lyricIdx >= 0 && lyricIdx < s.lyrics.size) {
+                    s.lyrics[lyricIdx].text
+                } else {
+                    Items.color("&f${s.song.name} &7- &f${s.song.singer}")
+                }
+                bar.setTitle(Items.color("&b♪ &r$title"))
+                // 进度
+                if (s.song.time > 0) {
+                    bar.progress = (s.currentTime.toDouble() / s.song.time).coerceIn(0.0, 1.0)
+                }
             }
 
             // 播放结束
@@ -191,12 +258,23 @@ object MusicPlayer {
 
     /** 歌曲播放结束处理 */
     private fun onSongEnd(player: Player, state: PlayState) {
+        // v2.5.1: 优先消费 priorityQueue (手动推送的下一首)
+        // 手动添加的下一首播放优先级高于随机/顺序播放
+        if (state.priorityQueue.isNotEmpty()) {
+            val nextSong = state.priorityQueue.removeAt(0)
+            Debug.debug("优先队列播放: ${player.name} - ${nextSong.name} (剩余${state.priorityQueue.size})")
+            startPlay(player, nextSong, state.playlistQueue, state.playlistIndex, false, notify = true,
+                priorityQueue = state.priorityQueue, historyStack = state.historyStack)
+            return
+        }
+
         val mode = PlayerSettings.getPlayMode(player)
         when (mode) {
             "loop_one" -> {
                 // 单曲循环: 重新播放当前歌曲
                 Debug.debug("单曲循环: ${player.name} - ${state.song.name}")
-                startPlay(player, state.song, state.playlistQueue, state.playlistIndex, state.isTemporary, notify = true)
+                startPlay(player, state.song, state.playlistQueue, state.playlistIndex, state.isTemporary, notify = true,
+                    priorityQueue = state.priorityQueue, historyStack = state.historyStack)
             }
             "shuffle" -> {
                 // 随机播放: 从歌单队列中随机选一首
@@ -204,7 +282,12 @@ object MusicPlayer {
                     val nextIdx = (0 until state.playlistQueue.size).filter { it != state.playlistIndex }.random()
                     val nextSong = state.playlistQueue[nextIdx]
                     Debug.debug("随机播放: ${player.name} - ${nextSong.name} (idx=$nextIdx)")
-                    startPlay(player, nextSong, state.playlistQueue, nextIdx, false, notify = true)
+                    startPlay(player, nextSong, state.playlistQueue, nextIdx, false, notify = true,
+                        priorityQueue = state.priorityQueue, historyStack = state.historyStack)
+                } else if (state.playlistQueue.size == 1) {
+                    // 只有一首歌, 重新播放
+                    startPlay(player, state.playlistQueue[0], state.playlistQueue, 0, false, notify = true,
+                        priorityQueue = state.priorityQueue, historyStack = state.historyStack)
                 } else {
                     stop(player)
                 }
@@ -217,7 +300,8 @@ object MusicPlayer {
                     if (nextIdx < state.playlistQueue.size) {
                         val nextSong = state.playlistQueue[nextIdx]
                         Debug.debug("恢复歌单: ${player.name} - ${nextSong.name} (idx=$nextIdx)")
-                        startPlay(player, nextSong, state.playlistQueue, nextIdx, false, notify = true)
+                        startPlay(player, nextSong, state.playlistQueue, nextIdx, false, notify = true,
+                            priorityQueue = state.priorityQueue, historyStack = state.historyStack)
                     } else {
                         stop(player)
                         Debug.debug("播放结束: ${player.name} 歌单已空")
@@ -229,7 +313,8 @@ object MusicPlayer {
                 if (nextIdx < state.playlistQueue.size) {
                     val nextSong = state.playlistQueue[nextIdx]
                     Debug.debug("顺序播放: ${player.name} - ${nextSong.name} (idx=$nextIdx)")
-                    startPlay(player, nextSong, state.playlistQueue, nextIdx, false, notify = true)
+                    startPlay(player, nextSong, state.playlistQueue, nextIdx, false, notify = true,
+                        priorityQueue = state.priorityQueue, historyStack = state.historyStack)
                 } else {
                     stop(player)
                     Debug.debug("播放结束: ${player.name} 歌单已空")
@@ -241,6 +326,10 @@ object MusicPlayer {
     /** 停止播放 */
     fun stop(player: Player) {
         tasks.remove(player)?.let { SchedulerUtil.cancelTask(it) }
+        // v2.5.4: 移除 BossBar
+        states[player]?.bossBar?.let { bar ->
+            bar.removeAll()
+        }
         states.remove(player)
         ModChannel.stop(player)
         ModChannel.clearLyric(player)
@@ -250,15 +339,34 @@ object MusicPlayer {
     /** 上一首 */
     fun playPrev(player: Player) {
         val state = states[player] ?: return
+        // v2.5.1: 优先使用 historyStack 回退到实际上一首 (随机模式下也能正确回退)
+        if (state.historyStack.isNotEmpty()) {
+            val prevSong = state.historyStack.removeAt(state.historyStack.size - 1)
+            Debug.debug("历史回退: ${player.name} - ${prevSong.name} (历史栈剩${state.historyStack.size})")
+            // skipHistoryPush=true: 不把当前歌曲压回历史栈, 避免上一首循环
+            startPlay(player, prevSong, state.playlistQueue, state.playlistIndex, false, notify = true,
+                priorityQueue = state.priorityQueue, historyStack = state.historyStack, skipHistoryPush = true)
+            return
+        }
+        // 历史栈为空, 走顺序回退
         val queue = state.playlistQueue
         if (queue.isEmpty()) return
         val prevIdx = if (state.playlistIndex > 0) state.playlistIndex - 1 else queue.size - 1
-        startPlay(player, queue[prevIdx], queue, prevIdx, false, notify = true)
+        startPlay(player, queue[prevIdx], queue, prevIdx, false, notify = true,
+            priorityQueue = state.priorityQueue, historyStack = state.historyStack)
     }
 
     /** 下一首 */
     fun playNext(player: Player) {
         val state = states[player] ?: return
+        // v2.5.1: 优先消费 priorityQueue (手动推送的下一首)
+        if (state.priorityQueue.isNotEmpty()) {
+            val nextSong = state.priorityQueue.removeAt(0)
+            Debug.debug("优先下一首: ${player.name} - ${nextSong.name} (剩余${state.priorityQueue.size})")
+            startPlay(player, nextSong, state.playlistQueue, state.playlistIndex, false, notify = true,
+                priorityQueue = state.priorityQueue, historyStack = state.historyStack)
+            return
+        }
         val queue = state.playlistQueue
         if (queue.isEmpty()) return
         val mode = PlayerSettings.getPlayMode(player)
@@ -267,15 +375,18 @@ object MusicPlayer {
             state.playlistIndex + 1 < queue.size -> state.playlistIndex + 1
             else -> 0
         }
-        startPlay(player, queue[nextIdx], queue, nextIdx, false, notify = true)
+        startPlay(player, queue[nextIdx], queue, nextIdx, false, notify = true,
+            priorityQueue = state.priorityQueue, historyStack = state.historyStack)
     }
 
-    /** 推曲: 将歌曲加入播放队列末尾 */
+    /** 推曲: 将歌曲加入下一首播放队列 (优先级高于随机/顺序播放) */
     fun pushToQueue(player: Player, song: OurMusicApi.SongDetail) {
         val state = states[player]
         if (state != null) {
-            state.playlistQueue.add(song)
-            player.sendMessage(Items.color("${Messages.prefix()} &a已加入播放队列: &f${song.name} &7- &f${song.singer}"))
+            // v2.5.1: 加入 priorityQueue (下一首播放), 而不是 playlistQueue 末尾
+            state.priorityQueue.add(song)
+            val pos = state.priorityQueue.size
+            player.sendMessage(Items.color("${Messages.prefix()} &a已加入下一首播放: &f${song.name} &7- &f${song.singer} &7(队列位置: $pos)"))
         } else {
             // 没在播放, 直接播放这首歌
             play(player, song)

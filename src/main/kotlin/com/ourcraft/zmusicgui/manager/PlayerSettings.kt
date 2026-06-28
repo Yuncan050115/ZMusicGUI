@@ -28,26 +28,8 @@ object PlayerSettings {
         var favorites: MutableList<String> = mutableListOf(),
         // 公开标记 (玩家自己的歌单设为公开, 格式: "平台:歌单ID")
         var publicPlaylists: MutableList<String> = mutableListOf(),
-        // 账号绑定 (per-platform token, 用于播放 VIP 歌曲)
-        var accounts: MutableMap<String, AccountInfo> = mutableMapOf(),
         // 歌单本地重命名覆盖 (key="平台:歌单ID", value=自定义名称)
         var playlistRenames: MutableMap<String, String> = mutableMapOf()
-    )
-
-    /**
-     * 平台账号信息
-     *  - QQ:    userId=uin, token=p_skey
-     *  - 网易云: userId/token 留空, cookie=MUSIC_U=xxx; __csrf=yyy
-     *  - 酷狗:  userId=userid, token=token
-     *  - 酷我:  userId=kw_user_id, token=kw_token
-     */
-    data class AccountInfo(
-        val platform: String,       // qq / netease / kugou / kuwo
-        val userId: String,         // QQ=uin, kugou=userid, kuwo=kw_user_id (网易云留空)
-        val token: String,          // QQ=p_skey, kugou=token, kuwo=kw_token (网易云留空)
-        val cookie: String = "",    // 网易云专用 (MUSIC_U=xxx; __csrf=yyy)
-        val nickname: String = "",  // 昵称
-        val expireAt: Long = 0L     // 过期时间戳 (毫秒, 0=永久)
     )
 
     private val cache = ConcurrentHashMap<String, Settings>()
@@ -87,7 +69,6 @@ object PlayerSettings {
                     playMode = section.getString("play-mode", "sequence")!!,
                     favorites = section.getStringList("favorites").toMutableList(),
                     publicPlaylists = section.getStringList("public-playlists").toMutableList(),
-                    accounts = loadAccounts(section.getConfigurationSection("accounts")),
                     playlistRenames = loadPlaylistRenames(section.getConfigurationSection("playlist-renames"))
                 )
             } else {
@@ -230,60 +211,6 @@ object PlayerSettings {
         return false
     }
 
-    // ==================== 账号绑定 ====================
-
-    /** 从 YAML 读取账号信息 (兼容网易云 cookie 模式) */
-    private fun loadAccounts(section: org.bukkit.configuration.ConfigurationSection?): MutableMap<String, AccountInfo> {
-        val map = mutableMapOf<String, AccountInfo>()
-        if (section == null) return map
-        for (platform in section.getKeys(false)) {
-            val accSec = section.getConfigurationSection(platform) ?: continue
-            val info = AccountInfo(
-                platform = platform,
-                userId = accSec.getString("user-id", "") ?: "",
-                token = accSec.getString("token", "") ?: "",
-                cookie = accSec.getString("cookie", "") ?: "",
-                nickname = accSec.getString("nickname", "") ?: "",
-                expireAt = accSec.getLong("expire-at", 0L)
-            )
-            // 有效性判断: QQ 需 userId+token, 酷狗/酷我只需 cookie 非空 (v2.4.0 cookie 透传)
-            val valid = when (platform) {
-                "qq" -> info.userId.isNotEmpty() && info.token.isNotEmpty()
-                "kugou", "kuwo", "netease" -> info.cookie.isNotEmpty()
-                else -> info.userId.isNotEmpty() && info.token.isNotEmpty()
-            }
-            if (valid) {
-                map[platform] = info
-            }
-        }
-        return map
-    }
-
-    /** 获取玩家在指定平台的账号信息 */
-    fun getAccount(player: Player, platform: String): AccountInfo? {
-        val s = getSettings(player)
-        val acc = s.accounts[platform] ?: return null
-        // 检查是否过期
-        if (acc.expireAt > 0 && System.currentTimeMillis() > acc.expireAt) {
-            Debug.debug("账号已过期: ${player.name} platform=$platform")
-            return null
-        }
-        return acc
-    }
-
-    /** 设置玩家在指定平台的账号信息 (含网易云 cookie) */
-    fun setAccount(player: Player, info: AccountInfo) {
-        val s = getSettings(player)
-        s.accounts[info.platform] = info
-        yaml.set("players.${player.uniqueId}.accounts.${info.platform}.user-id", info.userId)
-        yaml.set("players.${player.uniqueId}.accounts.${info.platform}.token", info.token)
-        yaml.set("players.${player.uniqueId}.accounts.${info.platform}.cookie", info.cookie)
-        yaml.set("players.${player.uniqueId}.accounts.${info.platform}.nickname", info.nickname)
-        yaml.set("players.${player.uniqueId}.accounts.${info.platform}.expire-at", info.expireAt)
-        save()
-        Debug.info("账号绑定: ${player.name} - ${info.platform} (${info.nickname})")
-    }
-
     // ==================== 歌单本地重命名 ====================
 
     /** 从 YAML 读取歌单重命名映射 (key="平台:歌单ID" -> 自定义名称) */
@@ -336,22 +263,5 @@ object PlayerSettings {
             Debug.info("歌单重命名已删除: ${player.name} - $key")
         }
         return removed
-    }
-
-    /** 删除玩家在指定平台的账号绑定 */
-    fun removeAccount(player: Player, platform: String): Boolean {
-        val s = getSettings(player)
-        val removed = s.accounts.remove(platform) != null
-        if (removed) {
-            yaml.set("players.${player.uniqueId}.accounts.$platform", null)
-            save()
-            Debug.info("账号解绑: ${player.name} - $platform")
-        }
-        return removed
-    }
-
-    /** 玩家是否绑定了指定平台的账号 */
-    fun hasAccount(player: Player, platform: String): Boolean {
-        return getAccount(player, platform) != null
     }
 }

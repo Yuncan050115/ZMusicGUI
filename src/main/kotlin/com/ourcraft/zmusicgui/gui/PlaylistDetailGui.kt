@@ -98,8 +98,7 @@ object PlaylistDetailGui : ZGui {
 
         // 操作按钮
         val totalPages = maxOf(1, (songs.size + perPage - 1) / perPage)
-        inv.setItem(37, Items.buildGlowing(Material.JUKEBOX, Messages.gui("detail.play-all"),
-            "&7从第一首开始顺序播放"))
+        // v2.5.2: 移除"从第一首开始播放"按钮 — 点击歌曲即播放整个歌单, 无需额外按钮
         // 重命名按钮 (铁砧图标, 仅个人歌单可重命名)
         if (pl.isOwn || pl.isFavorite) {
             val hasRename = renameOpt != null
@@ -126,7 +125,7 @@ object PlaylistDetailGui : ZGui {
                 if (isFav) "&7点击取消收藏" else "&7点击收藏此歌单"))
         }
 
-        inv.setItem(49, Items.build(Material.ARROW, "&a← 返回歌单列表"))
+        inv.setItem(49, Items.back())
         if (Config.showCredits()) inv.setItem(53, Items.credits())
 
         player.openInventory(inv)
@@ -179,7 +178,6 @@ object PlaylistDetailGui : ZGui {
         if (isShift || isRight) return
 
         when (slot) {
-            37 -> playPlaylistFromIndex(player, state.playlist, 0)
             SLOT_RENAME -> startRename(player, state.playlist)
             40 -> { state.page = (state.page - 1).coerceAtLeast(0); render(player) }
             42 -> {

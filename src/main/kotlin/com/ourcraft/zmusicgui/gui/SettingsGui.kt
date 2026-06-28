@@ -10,16 +10,15 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 
 /**
- * 个人设置 v2.2.1 — 默认源循环切换 + 歌词模式循环切换
+ * 个人设置 v3.0.0 — 默认源循环切换 + 歌词模式循环切换
  *
- * 支持 4 个源: 网易云 / 酷狗 / 酷我 / QQ音乐
+ * 支持 3 个源: 网易云 / 酷狗 / 酷我
  * 所有源共用 OurMusicApi (调用 ourcraft-music-api 服务端)
  */
 object SettingsGui : ZGui {
 
     private const val SLOT_SOURCE = 11
     private const val SLOT_LYRIC = 13
-    private const val SLOT_ACCOUNT = 15
     private const val SLOT_BACK = 22
 
     override fun open(player: Player) {
@@ -45,7 +44,7 @@ object SettingsGui : ZGui {
             "&7当前: $sourceName",
             "&b▸ 下一个: ${SearchService.sourceName(nextSource)}",
             "",
-            "&7支持: &c网易云 &7| &a酷狗 &7| &6酷我 &7| &dQQ"))
+            "&7支持: &c网易云 &7| &a酷狗 &7| &6酷我"))
 
         // 歌词显示模式切换
         val settings = PlayerSettings.getSettings(player)
@@ -60,17 +59,7 @@ object SettingsGui : ZGui {
             "&7循环: 关闭 → BossBar → ActionBar → 关闭",
             "&7BossBar: 顶部血条样式", "&7ActionBar: 物品栏上方"))
 
-        // 账号管理入口 (2 平台: QQ + 网易云)
-        val bindCount = listOf("qq", "netease").count { PlayerSettings.hasAccount(player, it) }
-        inv.setItem(SLOT_ACCOUNT, Items.buildGlowing(Material.NAME_TAG, "&e&l🔗 账号管理",
-            "&7绑定音乐平台账号播放 VIP 歌曲",
-            "&7已绑定: &f$bindCount &7个平台",
-            "",
-            "&7QQ: ${if (PlayerSettings.hasAccount(player, "qq")) "&a✓ 已绑定" else "&c✗ 未绑定"}",
-            "&7网易云: ${if (PlayerSettings.hasAccount(player, "netease")) "&a✓ 已绑定" else "&c✗ 未绑定"}",
-            "&8酷狗/酷我 VIP 已下线",
-            "",
-            "&a▸ 点击管理"))
+        // 槽位 15 留空 (原账号管理入口已移除)
 
         inv.setItem(SLOT_BACK, Items.back())
         if (Config.showCredits()) inv.setItem(18, Items.credits())
@@ -105,7 +94,6 @@ object SettingsGui : ZGui {
                 }
                 open(player)
             }
-            SLOT_ACCOUNT -> AccountGui.open(player)
             18 -> MainGui.openWebsite(player)
             SLOT_BACK -> MainGui.open(player)
         }

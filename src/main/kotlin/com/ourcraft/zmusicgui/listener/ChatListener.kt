@@ -3,7 +3,6 @@ package com.ourcraft.zmusicgui.listener
 import com.ourcraft.zmusicgui.ZMusicGUI
 import com.ourcraft.zmusicgui.gui.PlaylistBrowserGui
 import com.ourcraft.zmusicgui.gui.QuickPlayGui
-import com.ourcraft.zmusicgui.manager.AccountManager
 import com.ourcraft.zmusicgui.manager.Messages
 import com.ourcraft.zmusicgui.manager.PlaylistManager
 import com.ourcraft.zmusicgui.util.Debug
@@ -17,7 +16,7 @@ import org.bukkit.event.player.PlayerQuitEvent
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * 聊天输入监听 — 用于搜索歌曲 / 导入歌单 / 账号绑定 / 歌单重命名
+ * 聊天输入监听 — 用于搜索歌曲 / 导入歌单 / 歌单重命名
  *
  * 不再处理 zm 命令分发, 所有播放均通过 MusicPlayer。
  */
@@ -28,26 +27,18 @@ object ChatListener : Listener {
      * @param scope   操作类型:
      *                - "quickplay_search"  快捷点歌搜索输入
      *                - "import_personal"   个人歌单导入
-     *                - "account_bind"      账号绑定 Token 输入 (所有平台)
      *                - "rename_playlist"   歌单重命名输入
-     * @param platform 平台 (account_bind 用)
      * @param extra   额外数据 (rename_playlist 用: "平台:歌单ID")
      */
     private data class Ctx(
         val source: String,
         val scope: String,
         val timeoutTask: Any?,
-        val platform: String? = null,
         val extra: String? = null
     )
     private val waiting = ConcurrentHashMap<Player, Ctx>()
 
     fun awaitInput(player: Player, source: String, scope: String, promptKey: String = "song-play-prompt") {
-        awaitInputWithPlatform(player, source, scope, promptKey, null)
-    }
-
-    /** 带平台参数的 awaitInput (用于账号绑定) */
-    fun awaitInputWithPlatform(player: Player, source: String, scope: String, promptKey: String, platform: String?) {
         waiting.remove(player)?.timeoutTask?.let { SchedulerUtil.cancelTask(it) }
 
         val timeoutTask = SchedulerUtil.runSyncLater(ZMusicGUI.plugin, Runnable {
@@ -58,10 +49,10 @@ object ChatListener : Listener {
             }
         }, 1800L)
 
-        waiting[player] = Ctx(source, scope, timeoutTask, platform)
+        waiting[player] = Ctx(source, scope, timeoutTask)
         val prompt = Messages.player(promptKey)
         player.sendMessage(color("${Messages.prefix()} ${Messages.player("song-prompt", "prompt" to prompt)}"))
-        Debug.debug("等待输入: ${player.name} scope=$scope source=$source platform=$platform")
+        Debug.debug("等待输入: ${player.name} scope=$scope source=$source")
     }
 
     /**
@@ -82,7 +73,7 @@ object ChatListener : Listener {
             }
         }, 1800L)
 
-        waiting[player] = Ctx(source = "", scope = scope, timeoutTask = timeoutTask, platform = null, extra = extra)
+        waiting[player] = Ctx(source = "", scope = scope, timeoutTask = timeoutTask, extra = extra)
         val prompt = Messages.player(promptKey)
         player.sendMessage(color("${Messages.prefix()} ${Messages.player("song-prompt", "prompt" to prompt)}"))
         Debug.debug("等待输入: ${player.name} scope=$scope extra=$extra")
@@ -126,17 +117,6 @@ object ChatListener : Listener {
             "search_playlist" -> {
                 SchedulerUtil.runSync(ZMusicGUI.plugin, Runnable {
                     PlaylistBrowserGui.handleSearchInput(player, input)
-                })
-            }
-            // 账号绑定 Token 输入 (QQ Cookie 或 网易云绑定码) → AccountManager 处理
-            "account_bind" -> {
-                SchedulerUtil.runSync(ZMusicGUI.plugin, Runnable {
-                    // 如果输入是 6 位数字, 走扫码绑定码流程; 否则走 F12 Cookie 流程 (仅 QQ)
-                    if (input.matches(Regex("\\d{6}"))) {
-                        AccountManager.handleBindCode(player, input)
-                    } else {
-                        AccountManager.handleTokenInput(player, ctx.platform ?: "qq", input)
-                    }
                 })
             }
             // 歌单重命名输入 → PlaylistManager 处理 (ctx.extra="平台:歌单ID")

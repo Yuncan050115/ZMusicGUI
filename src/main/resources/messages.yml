@@ -1,5 +1,5 @@
 # ====================================================================
-# ZMusicGUI v2.1.0 语言文件
+# ZMusicGUI v3.0.0 语言文件
 # 支持 & 颜色代码
 # ====================================================================
 
@@ -35,7 +35,6 @@ player:
   song-cancelled: "已取消"
   song-prompt: "&a请在聊天栏输入 &e{prompt}&a, 输入 &ccancel &a取消"
   song-play-prompt: "歌名"
-  account-token-prompt: "账号 Token (格式: userid=xxx; token=xxx)"
   rename-prompt: "新的歌单名称 (输入空恢复原名)"
   playlist-prompt: "歌单名称"
   import-prompt: "歌单链接或 ID (https://music.163.com/playlist/... 或纯数字 ID)"
