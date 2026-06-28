@@ -1,7 +1,7 @@
 # ZMusicGUI
 
 [![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/Yuncan050115/ZMusicGUI)
-[![Paper](https://img.shields.io/badge/Paper-1.13--1.21-green.svg)](https://papermc.io)
+[![Paper](https://img.shields.io/badge/Paper-1.13--26.X-green.svg)](https://papermc.io)
 [![Folia](https://img.shields.io/badge/Folia-supported-success.svg)](https://papermc.io/software/folia)
 [![License](https://img.shields.io/badge/license-GPL--3.0-orange.svg)](LICENSE)
 [![bStats](https://img.shields.io/badge/bStats-enabled-brightgreen.svg)](https://bstats.org/plugin/bukkit/ZMusicGUI/31635)
@@ -123,6 +123,7 @@ gui:
 | 1.19.x | 1.19+ | 1.19+ | ✅ |
 | 1.20.x | 1.20+ | 1.20+ | ✅ |
 | 1.21.x | 1.21+ | 1.21+ | ✅ |
+| 26.1.X | 26.1.X | 26.1.X | ✅ |
 
 ## 构建
 
@@ -149,10 +150,8 @@ cd ZMusicGUI
 ## 更新日志
 
 ### v3.0.0 (2026-06-28)
-- 🗑️ **移除账号登录模块** — VIP 登录无法实现, 彻底删除账号绑定/扫码登录相关代码
-- 🗑️ 移除 QQ 音乐源支持 (SUPPORTED_SOURCES 不再包含 qq, normalizeSource 保留 qq→qq 兼容映射)
-- 🗑️ 删除 AccountManager / AccountGui / BindResult / verifyBindCode 等登录相关组件
-- 🗑️ 移除 PlayerSettings 中的 accounts 字段及 getAccount/setAccount/removeAccount/hasAccount 方法
+- 🗑️ **移除账号登录模块** — 因不可抗力，VIP 登录无法实现, 彻底删除账号绑定/扫码登录相关代码
+- 🗑️ 因不可抗力，移除 QQ 音乐源支持 (SUPPORTED_SOURCES 不再包含 qq, normalizeSource 保留 qq→qq 兼容映射)
 - ♻️ 简化 OurMusicApi.getSongDetail 签名 (移除 userId/token/cookie 参数)
 - ♻️ 简化 SearchService.getSongDetailBySource (内部不再读取账号登录态)
 - ♻️ 简化点歌失败提示为 "歌曲暂时无法播放, 请尝试其他源或歌曲"
@@ -160,7 +159,7 @@ cd ZMusicGUI
 - 📝 更新 README, 移除账号绑定章节
 
 ### v2.5.0 (2026-06-28)
-- 🗑️ **移除酷狗/酷我账号登录** — 服务器 IP 无法获取 VIP URL (token 绑浏览器 IP)
+- 🗑️ **移除酷狗/酷我账号登录** — 因不可抗力，服务器 IP 无法获取 VIP
 - 🗑️ 移除酷狗/酷我 VIP 歌曲提醒，改为提示使用网易云兜底
 - ✨ 新增网易云扫码登录支持 (网页扫码 → 6位绑定码 → 游戏输入)
 - ✨ QQ音乐支持网页提交 Cookie 获取绑定码 (除原有 F12 直接输入外)
