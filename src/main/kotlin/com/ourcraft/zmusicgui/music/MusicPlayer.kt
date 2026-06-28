@@ -14,9 +14,6 @@ import net.kyori.adventure.text.event.ClickEvent
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import org.bukkit.Bukkit
-import org.bukkit.boss.BarColor
-import org.bukkit.boss.BarStyle
-import org.bukkit.boss.BossBar
 import org.bukkit.entity.Player
 import java.util.concurrent.ConcurrentHashMap
 
@@ -67,9 +64,7 @@ object MusicPlayer {
         // pushToQueue 添加到这里, onSongEnd 优先消费此队列
         var priorityQueue: MutableList<OurMusicApi.SongDetail> = mutableListOf(),
         // 播放历史栈 (用于"上一首"在随机模式下回退到实际上一首)
-        var historyStack: MutableList<OurMusicApi.SongDetail> = mutableListOf(),
-        // v2.5.4: BossBar 歌词显示 (默认开启)
-        var bossBar: BossBar? = null
+        var historyStack: MutableList<OurMusicApi.SongDetail> = mutableListOf()
     )
 
     private val states = ConcurrentHashMap<Player, PlayState>()
@@ -155,21 +150,8 @@ object MusicPlayer {
             priorityQueue = priorityQueue, historyStack = historyStack)
         states[player] = state
 
-        // v2.5.4: 创建 BossBar 显示歌词 (默认开启)
-        val barColor = when (song.source) {
-            "netease" -> BarColor.RED
-            "qq" -> BarColor.PINK
-            "kugou" -> BarColor.GREEN
-            "kuwo" -> BarColor.YELLOW
-            else -> BarColor.BLUE
-        }
-        val bossBar = Bukkit.createBossBar(
-            Items.color("&f${song.name} &7- &f${song.singer}"),
-            barColor, BarStyle.SOLID
-        )
-        bossBar.progress = 0.0
-        bossBar.addPlayer(player)
-        state.bossBar = bossBar
+        // v3.0.1: BossBar/ActionBar 歌词显示统一由 LyricDisplayManager 管理
+        // (此处不再创建独立 BossBar, 避免重复显示)
 
         // 发送播放指令
         ModChannel.play(player, song.url)
@@ -197,21 +179,7 @@ object MusicPlayer {
                 ModChannel.sendLyric(player, s.lyrics[lyricIdx].text)
             }
 
-            // v2.5.4: 更新 BossBar (歌词 + 进度)
-            val bar = s.bossBar
-            if (bar != null) {
-                // 标题: 当前歌词行 (无歌词时显示歌曲名)
-                val title = if (lyricIdx >= 0 && lyricIdx < s.lyrics.size) {
-                    s.lyrics[lyricIdx].text
-                } else {
-                    Items.color("&f${s.song.name} &7- &f${s.song.singer}")
-                }
-                bar.setTitle(Items.color("&b♪ &r$title"))
-                // 进度
-                if (s.song.time > 0) {
-                    bar.progress = (s.currentTime.toDouble() / s.song.time).coerceIn(0.0, 1.0)
-                }
-            }
+            // v3.0.1: BossBar/ActionBar 显示由 LyricDisplayManager 统一管理
 
             // 播放结束
             if (s.currentTime >= s.song.time && s.song.time > 0) {
@@ -326,10 +294,6 @@ object MusicPlayer {
     /** 停止播放 */
     fun stop(player: Player) {
         tasks.remove(player)?.let { SchedulerUtil.cancelTask(it) }
-        // v2.5.4: 移除 BossBar
-        states[player]?.bossBar?.let { bar ->
-            bar.removeAll()
-        }
         states.remove(player)
         ModChannel.stop(player)
         ModChannel.clearLyric(player)
