@@ -28,6 +28,12 @@ lyric:
 
 # 播放范围
 scope:
+  # 领地插件类型: residence / lands / dominion
+  # 用于"领地"播放范围 (对应 residence scope), 三选一, 按服务器实际安装的领地插件填写
+  # residence: Residence (com.bekvon.bukkit.residence)
+  # lands:     Lands     (me.angeschossen.lands)
+  # dominion:  Dominion  (cn.lunadeer.dominion)
+  region-plugin: "residence"
   approval-timeout-seconds: 30
   self:       { cost: 1.0,  require-approval: false }
   residence:  { cost: 20.0, require-approval: true }

@@ -9,6 +9,8 @@ folia-supported: true
 softdepend:
   - Vault
   - Residence
+  - Lands
+  - Dominion
   - PlotSquared
 commands:
   zmusicgui:

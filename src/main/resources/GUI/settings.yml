@@ -1,0 +1,58 @@
+title: "个人设置"
+size: 27
+border:
+  enabled: true
+  material: LIGHT_BLUE_STAINED_GLASS_PANE
+icons:
+  title-icon:
+    slot: 4
+    material: COMPARATOR
+    name: "&6&l⚙ 个人设置"
+    lore:
+      - "&7默认音乐源: {source_name}"
+      - ""
+      - "&7点击下方切换源"
+      - "&7共 {source_count} 个源可选"
+      - "&7网易云由 &fYuncan &7提供 API"
+    glow: false
+    click: none
+  source:
+    slot: 11
+    material: MUSIC_DISC_CAT
+    name: "&f🎵 音乐源: {source_name}"
+    lore:
+      - "&7点击循环切换音乐源"
+      - "&7当前: {source_name}"
+      - "&b▸ 下一个: {next_source}"
+      - ""
+      - "&7支持: &c网易云 &7| &a酷狗 &7| &6酷我"
+    glow: true
+    click: source
+  lyric:
+    slot: 13
+    material: WRITABLE_BOOK
+    name: "&b&l歌词显示"
+    lore:
+      - "&7点击循环切换显示模式"
+      - "&7当前: {lyric_mode}"
+      - ""
+      - "&7循环: 关闭 → BossBar → ActionBar → 关闭"
+      - "&7BossBar: 顶部血条样式"
+      - "&7ActionBar: 物品栏上方"
+    glow: false
+    click: lyric
+  back:
+    slot: 22
+    material: OAK_DOOR
+    name: "&a← 返回主菜单"
+    lore:
+      - "&7点击回到主页"
+    glow: false
+    click: back
+  credits:
+    slot: 18
+    material: KNOWLEDGE_BOOK
+    name: "&8&l📖  关于"
+    lore: []
+    glow: false
+    click: credits

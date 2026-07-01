@@ -1,73 +1,77 @@
 package com.ourcraft.zmusicgui.gui
 
-import com.ourcraft.zmusicgui.gui.MainGui
 import com.ourcraft.zmusicgui.manager.Config
 import com.ourcraft.zmusicgui.manager.LyricDisplayManager.LyricMode
 import com.ourcraft.zmusicgui.manager.Messages
 import com.ourcraft.zmusicgui.manager.PlayerSettings
 import com.ourcraft.zmusicgui.util.Debug
 import com.ourcraft.zmusicgui.util.Items
-import org.bukkit.Material
 import org.bukkit.entity.Player
 
+/**
+ * 歌词设置 GUI v3.0.1 — TrMenu 风格 YAML 自定义
+ *
+ * 布局由 GUI/lyrics.yml 定义, 代码负责:
+ *  - 填充状态占位符 (toggle_name/toggle_hint/mode_desc/bossbar_name/actionbar_name)
+ *  - 点击路由 (toggle/mode/refresh/credits/back)
+ */
 object LyricsGui : ZGui {
-
-    private val TITLE = Items.deserialize("&6&l歌词显示设置")
-
 
     override fun open(player: Player) {
         val s = PlayerSettings.getSettings(player)
         val holder = GuiHolder(this)
-        val inv = holder.create(36, TITLE)
 
-        for (i in 0..8) { inv.setItem(i, Items.border(3)); inv.setItem(i + 27, Items.border(3)) }
-        for (row in 1..3) { inv.setItem(row * 9, Items.border(3)); inv.setItem(row * 9 + 8, Items.border(3)) }
+        val toggleName = if (s.lyricEnabled) "&a&l✔  歌词: 开" else "&c&l✘  歌词: 关"
+        val toggleHint = if (s.lyricEnabled) "&c▸ 点击关闭" else "&a▸ 点击开启"
+        val modeDesc = if (s.lyricMode == LyricMode.BOSSBAR) "&bBossBar" else "&eActionBar"
+        val bossbarName = if (s.lyricMode == LyricMode.BOSSBAR) "&d⬛  BossBar &b✔" else "&7⬛  BossBar"
+        val actionbarName = if (s.lyricMode == LyricMode.ACTIONBAR) "&e⬛  ActionBar &b✔" else "&7⬛  ActionBar"
 
-        inv.setItem(4, Items.divider("个人歌词设置"))
+        val placeholders = mapOf(
+            "toggle_name" to toggleName,
+            "toggle_hint" to toggleHint,
+            "mode_desc" to modeDesc,
+            "bossbar_name" to bossbarName,
+            "actionbar_name" to actionbarName
+        )
 
-        inv.setItem(11, if (s.lyricEnabled)
-            Items.buildGlowing(Material.LIME_DYE, "&a&l✔  歌词: 开", "", "&c▸ 点击关闭")
-        else
-            Items.build(Material.GRAY_DYE, "&c&l✘  歌词: 关", "", "&a▸ 点击开启"))
+        val inv = GuiLoader.render("lyrics", holder, placeholders) ?: run {
+            player.sendMessage(Items.color("${Messages.prefix()} &cGUI 配置 lyrics.yml 缺失"))
+            return
+        }
 
-        val desc = if (s.lyricMode == LyricMode.BOSSBAR) "&bBossBar" else "&eActionBar"
-        inv.setItem(13, Items.build(Material.COMPARATOR, "&6&l🔄  显示模式", "&f当前: $desc", "", "&a▸ 点击切换"))
-
-        inv.setItem(15, Items.build(
-            if (s.lyricMode == LyricMode.BOSSBAR) Material.PINK_STAINED_GLASS_PANE else Material.WHITE_STAINED_GLASS_PANE,
-            if (s.lyricMode == LyricMode.BOSSBAR) "&d⬛  BossBar &b✔" else "&7⬛  BossBar"))
-        inv.setItem(20, Items.build(
-            if (s.lyricMode == LyricMode.ACTIONBAR) Material.PINK_STAINED_GLASS_PANE else Material.WHITE_STAINED_GLASS_PANE,
-            if (s.lyricMode == LyricMode.ACTIONBAR) "&e⬛  ActionBar &b✔" else "&7⬛  ActionBar"))
-
-        inv.setItem(24, Items.build(Material.CLOCK, "&a🔄  刷新"))
-        if (Config.showCredits()) inv.setItem(27, Items.credits())
-        inv.setItem(31, Items.back())
+        if (!Config.showCredits()) {
+            GuiLoader.getIconAt("lyrics", 27)?.let {
+                if (it.clickHandler == "credits") inv.setItem(27, Items.border())
+            }
+        }
 
         player.openInventory(inv)
         Debug.debug("歌词设置已打开: ${player.name}")
     }
 
     override fun handleClick(player: Player, slot: Int) {
-        when (slot) {
-            11 -> {
+        val handler = GuiLoader.getClickHandler("lyrics", slot) ?: return
+        when (handler) {
+            "toggle" -> {
                 val s = PlayerSettings.getSettings(player)
                 PlayerSettings.setLyricEnabled(player, !s.lyricEnabled)
                 val status = if (!s.lyricEnabled) Messages.player("enabled") else Messages.player("disabled")
                 player.sendMessage("${Messages.prefix()} ${Messages.player("lyric-toggled", "status" to status)}")
                 Debug.debug("${player.name} 切换歌词: ${!s.lyricEnabled}")
+                open(player)
             }
-            13 -> {
+            "mode" -> {
                 val s = PlayerSettings.getSettings(player)
                 val next = if (s.lyricMode == LyricMode.BOSSBAR) LyricMode.ACTIONBAR else LyricMode.BOSSBAR
                 PlayerSettings.setLyricMode(player, next)
                 player.sendMessage("${Messages.prefix()} ${Messages.player("lyric-mode-changed", "mode" to next.name)}")
                 Debug.debug("${player.name} 切换模式: $next")
+                open(player)
             }
-            24 -> {}
-            27 -> MainGui.openWebsite(player)
-            31 -> MainGui.open(player)
+            "refresh" -> open(player)
+            "credits" -> MainGui.openWebsite(player)
+            "back" -> MainGui.open(player)
         }
-        if (slot != 31) open(player)
     }
 }

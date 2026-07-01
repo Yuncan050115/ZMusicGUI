@@ -1,6 +1,7 @@
 package com.ourcraft.zmusicgui
 
 import com.ourcraft.zmusicgui.channel.ModChannel
+import com.ourcraft.zmusicgui.gui.GuiLoader
 import com.ourcraft.zmusicgui.gui.MainGui
 import com.ourcraft.zmusicgui.listener.ChatListener
 import com.ourcraft.zmusicgui.listener.GuiListener
@@ -35,7 +36,8 @@ class ZMusicGUI : JavaPlugin() {
     companion object {
         lateinit var plugin: ZMusicGUI
             private set
-        private const val CURRENT_VERSION = "3.0.0"
+        // 动态读取 plugin.yml 版本号, 与 build.gradle.kts 的 project.version 保持同步, 避免硬编码漂移
+        private val CURRENT_VERSION get() = plugin.description.version
         private const val GITHUB_API = "https://api.github.com/repos/Yuncan050115/ZMusicGUI/releases/latest"
     }
 
@@ -49,6 +51,9 @@ class ZMusicGUI : JavaPlugin() {
 
         Config.load(this)
         Debug.info(Messages.console("config-loaded", "debug" to Config.debug().toString()))
+
+        // 加载 TrMenu 风格的 GUI YAML (用户可在 GUI/ 文件夹自定义全部界面)
+        GuiLoader.load(this)
 
         PlayerSettings.load(this)
         Debug.info(Messages.console("settings-loaded"))
@@ -135,6 +140,7 @@ class ZMusicGUI : JavaPlugin() {
         }
         Config.reload(this)
         Messages.reload(this)
+        GuiLoader.reload()
         sender.sendMessage(Messages.cmd("reload.success"))
         Debug.info(">> 配置已通过 /zmg reload 重载")
         return true

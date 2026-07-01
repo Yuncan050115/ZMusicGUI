@@ -1,0 +1,68 @@
+title: "歌词设置"
+size: 36
+border:
+  enabled: true
+  material: LIGHT_BLUE_STAINED_GLASS_PANE
+icons:
+  divider:
+    slot: 4
+    material: NAME_TAG
+    name: "&8▬▬▬ &6&l个人歌词设置 &8▬▬▬"
+    lore:
+      - "&7"
+    glow: false
+    click: none
+  toggle:
+    slot: 11
+    material: LIME_DYE
+    name: "{toggle_name}"
+    lore:
+      - ""
+      - "{toggle_hint}"
+    glow: false
+    click: toggle
+  mode:
+    slot: 13
+    material: COMPARATOR
+    name: "&6&l🔄  显示模式"
+    lore:
+      - "&f当前: {mode_desc}"
+      - ""
+      - "&a▸ 点击切换"
+    glow: false
+    click: mode
+  bossbar:
+    slot: 15
+    material: PINK_STAINED_GLASS_PANE
+    name: "{bossbar_name}"
+    lore: []
+    glow: false
+    click: none
+  actionbar:
+    slot: 20
+    material: WHITE_STAINED_GLASS_PANE
+    name: "{actionbar_name}"
+    lore: []
+    glow: false
+    click: none
+  refresh:
+    slot: 24
+    material: CLOCK
+    name: "&a🔄  刷新"
+    lore: []
+    glow: false
+    click: refresh
+  credits:
+    slot: 27
+    material: KNOWLEDGE_BOOK
+    name: "&8&l📖  关于"
+    lore: []
+    glow: false
+    click: credits
+  back:
+    slot: 31
+    material: OAK_DOOR
+    name: "&a← 返回主菜单"
+    lore: []
+    glow: false
+    click: back

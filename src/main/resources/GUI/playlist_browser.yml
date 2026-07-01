@@ -1,0 +1,89 @@
+title: "歌单浏览"
+size: 54
+border:
+  enabled: true
+  material: LIGHT_BLUE_STAINED_GLASS_PANE
+icons:
+  title-icon:
+    slot: 4
+    material: NETHER_STAR
+    name: "&6&l歌单浏览"
+    lore:
+      - "&7总计: &f{total} &7个歌单"
+      - "&a个人: {mine} &7| &e收藏: {fav} &7| &b其他: {other}"
+      - ""
+      - "&7左键查看 | Shift+左键收藏 | 右键公开切换"
+    glow: false
+    click: none
+  import:
+    slot: 45
+    material: WRITABLE_BOOK
+    name: "&e➕ 导入歌单"
+    lore:
+      - "&7通过链接或歌单ID导入"
+      - "&7当前源: {source}"
+      - ""
+      - "&a▸ 点击开始导入"
+    glow: true
+    click: import
+  search:
+    slot: 46
+    material: COMPASS
+    name: "&a🔍 搜索歌单"
+    lore:
+      - "&7按歌单名搜索歌单"
+      - "&7当前源: {source}"
+      - ""
+      - "&a▸ 点击开始搜索"
+    glow: true
+    click: search-playlist
+  prev-page:
+    slot: 47
+    material: ARROW
+    name: "&a⬆ 上一页"
+    lore:
+      - "&7第 {current}/{total} 页"
+    glow: false
+    click: prev-page
+  back:
+    slot: 49
+    material: OAK_DOOR
+    name: "&a← 返回主菜单"
+    lore: []
+    glow: false
+    click: back
+  refresh:
+    slot: 51
+    material: CLOCK
+    name: "&b🔄 刷新"
+    lore:
+      - "&7重新读取歌单数据"
+    glow: false
+    click: refresh
+  next-page:
+    slot: 53
+    material: ARROW
+    name: "&a⬇ 下一页"
+    lore:
+      - "&7第 {current}/{total} 页"
+    glow: false
+    click: next-page
+  credits:
+    slot: 48
+    material: KNOWLEDGE_BOOK
+    name: "&8&l📖  关于"
+    lore: []
+    glow: false
+    click: credits
+dynamic:
+  slots: [10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43]
+  template:
+    material: MUSIC_DISC_CAT
+    name: "&f{name}"
+    lore:
+      - "&7歌曲: &f{count} 首"
+      - "&7平台: &f{platform}"
+      - "{owner_line}"
+      - "{status_line}"
+      - ""
+      - "&a▸ 点击查看歌曲列表"

@@ -17,21 +17,18 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 
 /**
- * 歌单详情 — 歌曲列表
+ * 歌单详情 v3.0.1 — TrMenu 风格 YAML 自定义
  *
- * 展示歌单内所有歌曲, 点击播放单曲, 或播放整个歌单。
- * 直接使用 MusicPlayer.play, 不调用 zm play 命令。
- *
- * 新增: 铁砧 (ANVIL) 按钮用于本地重命名歌单 (不修改外部平台)。
+ * 布局由 GUI/playlist_detail.yml 定义, 代码负责:
+ *  - 占位符填充 (playlist_name/count/platform/owner_line/rename_line/页码)
+ *  - 动态歌曲列表填充
+ *  - 收藏按钮材质切换 + 重命名按钮显隐
+ *  - 点击路由 (含 Shift+右键删除歌曲)
  */
 object PlaylistDetailGui : ZGui {
 
     private data class DetailState(val playlist: AggregatedPlaylist, var page: Int = 0)
     private val states = mutableMapOf<Player, DetailState>()
-    private val SONG_SLOT_ROWS = listOf(10..16, 19..25, 28..34)
-
-    /** 重命名按钮槽位 */
-    private const val SLOT_RENAME = 39
 
     fun open(player: Player, playlist: AggregatedPlaylist) {
         states[player] = DetailState(playlist)
@@ -48,85 +45,90 @@ object PlaylistDetailGui : ZGui {
         val pl = state.playlist
         val displayName = displayPlaylistName(player, pl)
         val holder = GuiHolder(this)
-        val inv = holder.create(54, Items.deserialize("&6&l$displayName"))
 
-        // 边框
-        for (i in 0..8) inv.setItem(i, Items.border())
-        for (i in 45..53) inv.setItem(i, Items.border())
-        for (r in 0..5) { inv.setItem(r * 9, Items.border()); inv.setItem(r * 9 + 8, Items.border()) }
-
-        // 标题信息 (显示重命名后的名称, 若有覆盖则附加原始名)
-        val renameOpt = PlayerSettings.getRenameOpt(player, pl.platform, pl.id)
-        val titleLore = mutableListOf(
-            Messages.gui("playlist.song-count", "count" to pl.songCount.toString()),
-            Messages.gui("playlist.platform", "platform" to platformName(pl.platform)),
-            if (pl.isGlobal) "&7来源: &b全服" else Messages.gui("playlist.owner", "owner" to pl.owner)
-        )
-        if (renameOpt != null && pl.name != renameOpt) {
-            titleLore.add("&7原始名: &f${pl.name}")
-        }
-        titleLore.add("")
-        titleLore.add(Messages.gui("detail.play-song"))
-        inv.setItem(4, Items.build(Material.NETHER_STAR, "&6&l$displayName",
-            *titleLore.toTypedArray()))
-
-        // 歌曲列表
         val songs = pl.songs
         val perPage = Config.playlistSongsPerPage()
+        val totalPages = maxOf(1, (songs.size + perPage - 1) / perPage)
+
+        val renameOpt = PlayerSettings.getRenameOpt(player, pl.platform, pl.id)
+        val renameLine = if (renameOpt != null && pl.name != renameOpt) "&7原始名: &f${pl.name}" else ""
+        val ownerLine = if (pl.isGlobal) "&7来源: &b全服" else Messages.gui("playlist.owner", "owner" to pl.owner)
+
+        val placeholders = mapOf(
+            "playlist_name" to displayName,
+            "count" to pl.songCount.toString(),
+            "platform" to platformName(pl.platform),
+            "owner_line" to ownerLine,
+            "rename_line" to renameLine,
+            "current" to (state.page + 1).toString(),
+            "total_pages" to totalPages.toString()
+        )
+
+        val inv = GuiLoader.render("playlist_detail", holder, placeholders) ?: run {
+            player.sendMessage(Items.color("${Messages.prefix()} &cGUI 配置 playlist_detail.yml 缺失"))
+            return
+        }
+
+        // 动态填充歌曲列表
         val startIdx = state.page * perPage
         val pageSongs = songs.drop(startIdx).take(perPage)
-
-        val slots = SONG_SLOT_ROWS.flatten()
-        for (i in pageSongs.indices) {
-            val song = pageSongs[i]
-            val slot = slots.getOrNull(i) ?: break
+        val dynDef = GuiLoader.getDef("playlist_detail")?.dynamic
+        val dynItems = pageSongs.mapIndexed { i, song ->
             val num = startIdx + i + 1
+            val name = GuiLoader.applyPlaceholders(dynDef?.templateName ?: "&f{index}. {name}",
+                mapOf("index" to num.toString(), "name" to song.name))
+            val lore = (dynDef?.templateLore ?: emptyList()).map { line ->
+                GuiLoader.applyPlaceholders(line, mapOf(
+                    "singer" to song.singer, "id" to song.id, "name" to song.name
+                ))
+            }.toMutableList()
+            // 历史歌单追加 Shift+右键删除提示
+            if (pl.isHistory) lore.add("&cShift+右键 &7删除此歌")
+            GuiLoader.DynamicItem(name, lore, Material.PAPER, glow = false)
+        }
+        GuiLoader.fillDynamic(inv, "playlist_detail", dynItems)
 
-            val songDisplayName = Messages.gui("detail.song-name", "name" to "$num. ${song.name}")
-            val lore = mutableListOf(
-                Messages.gui("detail.song-singer", "singer" to song.singer),
-                Messages.gui("detail.song-id", "id" to song.id),
-                ""
-            )
-            lore.add(Messages.gui("detail.play-song"))
-            // 历史歌单: Shift+右键删除提示
-            if (pl.isHistory) {
-                lore.add("&cShift+右键 &7删除此歌")
+        // 重命名按钮: 仅个人/收藏歌单显示
+        if (!pl.isOwn && !pl.isFavorite) {
+            GuiLoader.getIconAt("playlist_detail", 39)?.let {
+                if (it.clickHandler == "rename") inv.setItem(39, Items.border())
             }
-            inv.setItem(slot, Items.build(Material.PAPER, songDisplayName, *lore.toTypedArray()))
+        } else if (renameOpt != null) {
+            // 已有重命名: 更新按钮名称提示
+            val renameIcon = GuiLoader.getIconAt("playlist_detail", 39)
+            if (renameIcon != null && renameIcon.clickHandler == "rename") {
+                inv.setItem(39, Items.build(Material.ANVIL, "&e&l✎ 重命名 (已自定义)",
+                    "&7本地重命名此歌单 (不影响外部平台)",
+                    "&7当前: &f$displayName",
+                    "&7原始: &f${pl.name}",
+                    "",
+                    "&a▸ 点击输入新名称",
+                    "&c输入空 &7恢复原名"))
+            }
         }
 
-        // 操作按钮
-        val totalPages = maxOf(1, (songs.size + perPage - 1) / perPage)
-        // v2.5.2: 移除"从第一首开始播放"按钮 — 点击歌曲即播放整个歌单, 无需额外按钮
-        // 重命名按钮 (铁砧图标, 仅个人歌单可重命名)
-        if (pl.isOwn || pl.isFavorite) {
-            val hasRename = renameOpt != null
-            inv.setItem(SLOT_RENAME, Items.build(Material.ANVIL,
-                if (hasRename) "&e&l✎ 重命名 (已自定义)" else "&e&l✎ 重命名歌单",
-                "&7本地重命名此歌单 (不影响外部平台)",
-                if (hasRename) "&7当前: &f$displayName" else "",
-                if (hasRename) "&7原始: &f${pl.name}" else "",
-                "",
-                "&a▸ 点击输入新名称",
-                "&c输入空 &7恢复原名"))
-        }
-        inv.setItem(40, Items.build(Material.ARROW, Messages.gui("playlist.prev-page"),
-            Messages.gui("playlist.page-info", "current" to (state.page + 1).toString(), "total" to totalPages.toString())))
-        inv.setItem(42, Items.build(Material.ARROW, Messages.gui("playlist.next-page"),
-            Messages.gui("playlist.page-info", "current" to (state.page + 1).toString(), "total" to totalPages.toString())))
-
-        // 收藏按钮 (仅非自己的歌单)
-        if (!pl.owner.equals(player.name, true) || pl.isGlobal) {
+        // 收藏按钮: 仅非自己的歌单显示, 材质按收藏状态切换
+        if (pl.owner.equals(player.name, true) && !pl.isGlobal) {
+            GuiLoader.getIconAt("playlist_detail", 44)?.let {
+                if (it.clickHandler == "favorite") inv.setItem(44, Items.border())
+            }
+        } else {
             val isFav = PlayerSettings.isFavorite(player, pl.platform, pl.id)
-            inv.setItem(44, Items.build(
-                if (isFav) Material.GOLD_INGOT else Material.GOLD_NUGGET,
-                if (isFav) Messages.gui("detail.favorite-remove") else Messages.gui("detail.favorite-add"),
-                if (isFav) "&7点击取消收藏" else "&7点击收藏此歌单"))
+            val favIcon = GuiLoader.getIconAt("playlist_detail", 44)
+            if (favIcon != null && favIcon.clickHandler == "favorite") {
+                val mat = if (isFav) Material.GOLD_INGOT else Material.GOLD_NUGGET
+                val name = if (isFav) Messages.gui("detail.favorite-remove") else Messages.gui("detail.favorite-add")
+                val lore = if (isFav) "&7点击取消收藏" else "&7点击收藏此歌单"
+                inv.setItem(44, Items.build(mat, name, lore))
+            }
         }
 
-        inv.setItem(49, Items.back())
-        if (Config.showCredits()) inv.setItem(53, Items.credits())
+        // credits 按配置显示/隐藏
+        if (!Config.showCredits()) {
+            GuiLoader.getIconAt("playlist_detail", 53)?.let {
+                if (it.clickHandler == "credits") inv.setItem(53, Items.border())
+            }
+        }
 
         player.openInventory(inv)
         Debug.debug("歌单详情: ${player.name} playlist=${pl.name} songs=${songs.size} page=${state.page}")
@@ -144,9 +146,9 @@ object PlaylistDetailGui : ZGui {
     fun handleClickWithEvent(player: Player, slot: Int, isShift: Boolean, isRight: Boolean) {
         val state = states[player] ?: return
 
-        // 歌曲槽位
-        val songSlots = SONG_SLOT_ROWS.flatten()
-        val songIdx = songSlots.indexOf(slot)
+        // 歌曲动态槽位
+        val dynSlots = GuiLoader.getDynamicSlots("playlist_detail")
+        val songIdx = dynSlots.indexOf(slot)
         if (songIdx >= 0) {
             val perPage = Config.playlistSongsPerPage()
             val actualIdx = state.page * perPage + songIdx
@@ -158,7 +160,6 @@ object PlaylistDetailGui : ZGui {
                 player.sendMessage(Items.color("${Messages.prefix()} &7正在删除: &f${song.name} &7- &f${song.singer}"))
                 PlaylistManager.removeSongFromHistory(player, song.id, song.source) {
                     player.sendMessage(Items.color("${Messages.prefix()} &a已从历史歌单删除: &f${song.name}"))
-                    // 重新打开详情页 (会刷新缓存)
                     val refreshed = PlaylistManager.sortForDisplay(player, emptyList())
                     Debug.debug("历史删除完成: ${player.name} (refreshed=${refreshed.size})")
                     PlaylistBrowserGui.open(player)
@@ -174,25 +175,26 @@ object PlaylistDetailGui : ZGui {
             return
         }
 
-        // 仅普通左键处理功能按钮 (Shift/右键不触发翻页/收藏等)
+        // 仅普通左键处理功能按钮
         if (isShift || isRight) return
 
-        when (slot) {
-            SLOT_RENAME -> startRename(player, state.playlist)
-            40 -> { state.page = (state.page - 1).coerceAtLeast(0); render(player) }
-            42 -> {
+        val handler = GuiLoader.getClickHandler("playlist_detail", slot) ?: return
+        when (handler) {
+            "rename" -> startRename(player, state.playlist)
+            "prev-page" -> { state.page = (state.page - 1).coerceAtLeast(0); render(player) }
+            "next-page" -> {
                 val perPage = Config.playlistSongsPerPage()
                 val maxPage = (state.playlist.songs.size + perPage - 1) / perPage - 1
                 state.page = (state.page + 1).coerceAtMost(maxOf(0, maxPage))
                 render(player)
             }
-            44 -> {
+            "favorite" -> {
                 val added = PlayerSettings.toggleFavorite(player, state.playlist.platform, state.playlist.id)
                 player.sendMessage(Items.color("${Messages.prefix()} ${if (added) Messages.player("favorite-added") else Messages.player("favorite-removed")}"))
                 render(player)
             }
-            49 -> PlaylistBrowserGui.open(player)
-            53 -> MainGui.openWebsite(player)
+            "back" -> PlaylistBrowserGui.open(player)
+            "credits" -> MainGui.openWebsite(player)
         }
     }
 
@@ -222,14 +224,13 @@ object PlaylistDetailGui : ZGui {
             return
         }
         player.closeInventory()
-        // 显示名称应用本地重命名覆盖
         val displayName = PlayerSettings.getRename(player, playlist.platform, playlist.id, playlist.name)
         player.sendMessage(Items.color("${Messages.prefix()} &7正在加载: &f${playlist.songs[startIndex].name}..."))
 
         val source = playlist.platform
         val songs = playlist.songs
 
-        // 懒加载: 只加载点击的歌曲, 后续歌曲在切歌时按需加载 (避免大量并发请求压垮服务端)
+        // 懒加载: 只加载点击的歌曲, 后续歌曲在切歌时按需加载
         SchedulerUtil.runAsync(ZMusicGUI.plugin, Runnable {
             val startSong = songs[startIndex]
             val startDetail = try { SearchService.getSongDetailBySource(startSong.id, source, player) } catch (_: Throwable) { null }
@@ -241,7 +242,6 @@ object PlaylistDetailGui : ZGui {
                 return@Runnable
             }
 
-            // 只把后续歌曲的元信息(id/name/singer)放进队列, 播放时才按需获取 url
             val lazyQueue = songs.mapIndexed { idx, s ->
                 if (idx == startIndex) startDetail
                 else OurMusicApi.SongDetail(

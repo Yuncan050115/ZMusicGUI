@@ -16,15 +16,13 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 
 /**
- * 歌单浏览器 v2.1.0 — 统一视图
+ * 歌单浏览器 v3.0.1 — TrMenu 风格 YAML 自定义
  *
- * 一个页面展示所有歌单 (个人 + 收藏 + 全服), 收藏和个人置顶。
+ * 两个视图, 均由 YAML 定义:
+ *  - MAIN: GUI/playlist_browser.yml (歌单列表 + 导入/搜索/翻页/刷新)
+ *  - SEARCH: GUI/playlist_search.yml (搜索结果列表 + 翻页)
  *
- * 交互:
- *  - 左键歌单: 查看详情
- *  - Shift+左键: 收藏/取消收藏
- *  - 右键(自己的歌单): 公开/隐私切换
- *  - 底部: 导入(链接) / 搜索 / 翻页 / 刷新 / 返回
+ * 代码负责: 占位符填充, 分类材质/前缀, 点击路由 (含 Shift/右键)
  */
 object PlaylistBrowserGui : ZGui {
 
@@ -37,21 +35,8 @@ object PlaylistBrowserGui : ZGui {
     )
 
     private val states = mutableMapOf<Player, State>()
-    private const val PER_PAGE = 36  // 4 行 9 列
-    private const val SEARCH_PER_PAGE = 36
-
-    // 底部操作按钮
-    private const val SLOT_IMPORT = 45
-    private const val SLOT_SEARCH = 46
-    private const val SLOT_PREV = 47
-    private const val SLOT_BACK = 49
-    private const val SLOT_REFRESH = 51
-    private const val SLOT_NEXT = 53
-
-    // 搜索结果 GUI 按钮
-    private const val SLOT_SEARCH_PREV = 45
-    private const val SLOT_SEARCH_BACK = 49
-    private const val SLOT_SEARCH_NEXT = 53
+    private const val PER_PAGE = 28
+    private const val SEARCH_PER_PAGE = 28
 
     override fun open(player: Player) {
         ChatListener.cancel(player)
@@ -67,7 +52,7 @@ object PlaylistBrowserGui : ZGui {
 
     private fun showLoading(player: Player) {
         val holder = GuiHolder(this)
-        val inv = holder.create(27, Items.deserialize("${Config.playlistTitle()} &7(加载中...)"))
+        val inv = holder.create(27, Items.deserialize("${Messages.gui("playlist.title")} &7(加载中...)"))
         for (i in 0..26) inv.setItem(i, Items.border())
         inv.setItem(13, Items.build(Material.CLOCK, Messages.gui("common.loading"), Messages.gui("common.loading-hint")))
         player.openInventory(inv)
@@ -75,28 +60,32 @@ object PlaylistBrowserGui : ZGui {
 
     private fun render(player: Player) {
         val state = states[player] ?: return
-        // 统一排序: 个人 → 收藏 → 全服
         val sorted = PlaylistManager.sortForDisplay(player, state.all)
-
         val holder = GuiHolder(this)
-        val inv = holder.create(54, Items.deserialize(Config.playlistTitle()))
 
-        // 边框
-        for (i in 0..8) inv.setItem(i, Items.border())
-        for (i in 45..53) inv.setItem(i, Items.border())
-        for (r in 0..5) { inv.setItem(r * 9, Items.border()); inv.setItem(r * 9 + 8, Items.border()) }
-
-        // 统计
         val mineCount = sorted.count { it.isOwn }
         val favCount = sorted.count { it.isFavorite }
         val totalCount = sorted.size
-        inv.setItem(4, Items.build(Material.NETHER_STAR, "&6&l歌单浏览",
-            "&7总计: &f$totalCount &7个歌单",
-            "&a个人: $mineCount &7| &e收藏: $favCount &7| &b其他: ${totalCount - mineCount - favCount}",
-            "",
-            "&7左键查看 | Shift+左键收藏 | 右键公开切换"))
+        val totalPages = maxOf(1, ((sorted.size + PER_PAGE - 1) / PER_PAGE))
+        val sourceName = SearchService.sourceName(PlayerSettings.getCurrentSource(player))
 
-        // 歌单列表 (slot 10-43, 排除边框)
+        val placeholders = mapOf(
+            "total" to totalCount.toString(),
+            "mine" to mineCount.toString(),
+            "fav" to favCount.toString(),
+            "other" to (totalCount - mineCount - favCount).toString(),
+            "source" to sourceName,
+            "current" to (state.page + 1).toString(),
+            "total_pages" to totalPages.toString()
+        )
+
+        val inv = GuiLoader.render("playlist_browser", holder, placeholders) ?: run {
+            player.sendMessage(Items.color("${Messages.prefix()} &cGUI 配置 playlist_browser.yml 缺失"))
+            return
+        }
+
+        // 动态填充歌单列表
+        val dynSlots = GuiLoader.getDynamicSlots("playlist_browser")
         if (sorted.isEmpty()) {
             inv.setItem(22, Items.build(Material.BARRIER, "&c暂无歌单",
                 "&7你还没有任何歌单",
@@ -104,93 +93,24 @@ object PlaylistBrowserGui : ZGui {
         } else {
             val startIdx = state.page * PER_PAGE
             val pageList = sorted.drop(startIdx).take(PER_PAGE)
-            val slots = (10..16) + (19..25) + (28..34) + (37..43)
-            var lastCategory = ""
-            for (i in pageList.indices) {
-                val slot = slots.getOrNull(i) ?: break
-                val pl = pageList[i]
-                // 分类标签
-                val category = when {
-                    pl.isOwn && pl.isFavorite -> "个人&收藏"
-                    pl.isOwn -> "个人"
-                    pl.isFavorite -> "收藏"
-                    else -> "全服"
-                }
-                if (category != lastCategory) {
-                    lastCategory = category
-                }
-                renderPlaylist(inv, slot, pl, player, category)
-            }
+            val dynItems = pageList.map { pl -> buildPlaylistDynamicItem(player, pl) }
+            GuiLoader.fillDynamic(inv, "playlist_browser", dynItems)
         }
 
-        // 底部操作
-        val totalPages = maxOf(1, ((sorted.size + PER_PAGE - 1) / PER_PAGE))
-        val currentSource = PlayerSettings.getCurrentSource(player)
-        val sourceName = SearchService.sourceName(currentSource)
-        inv.setItem(SLOT_IMPORT, Items.buildGlowing(Material.WRITABLE_BOOK,
-            Messages.gui("playlist.import"),
-            "&7通过链接或歌单ID导入",
-            "&7当前源: $sourceName",
-            if (currentSource == "netease") "&7支持网易云分享链接" else "&c该源暂不支持导入",
-            "",
-            "&a▸ 点击开始导入"))
-        inv.setItem(SLOT_SEARCH, Items.buildGlowing(Material.COMPASS,
-            "&a🔍 搜索歌单",
-            "&7按歌单名搜索歌单",
-            "&7当前源: $sourceName",
-            if (currentSource == "netease") "&7适合发现热门歌单" else "&c该源暂不支持搜索",
-            "",
-            "&a▸ 点击开始搜索"))
-        inv.setItem(SLOT_PREV, Items.build(Material.ARROW, Messages.gui("playlist.prev-page"),
-            Messages.gui("playlist.page-info", "current" to (state.page + 1).toString(), "total" to totalPages.toString())))
-        inv.setItem(SLOT_BACK, Items.back())
-        inv.setItem(SLOT_REFRESH, Items.build(Material.CLOCK, Messages.gui("playlist.refresh"),
-            "&7重新读取歌单数据"))
-        inv.setItem(SLOT_NEXT, Items.build(Material.ARROW, Messages.gui("playlist.next-page"),
-            Messages.gui("playlist.page-info", "current" to (state.page + 1).toString(), "total" to totalPages.toString())))
-        if (Config.showCredits()) inv.setItem(48, Items.credits())
+        // credits 按配置显示/隐藏
+        if (!Config.showCredits()) {
+            GuiLoader.getIconAt("playlist_browser", 48)?.let {
+                if (it.clickHandler == "credits") inv.setItem(48, Items.border())
+            }
+        }
 
         player.openInventory(inv)
         Debug.debug("歌单浏览: ${player.name} total=${sorted.size} page=${state.page}")
     }
 
-    private fun renderPlaylist(inv: org.bukkit.inventory.Inventory, slot: Int, pl: AggregatedPlaylist, player: Player, category: String) {
-        // 应用本地重命名覆盖显示
+    /** 构建歌单动态项 (含分类前缀/材质/状态行) */
+    private fun buildPlaylistDynamicItem(player: Player, pl: AggregatedPlaylist): GuiLoader.DynamicItem {
         val displayName = PlayerSettings.getRename(player, pl.platform, pl.id, pl.name)
-        val hasRename = displayName != pl.name
-        val lore = mutableListOf(
-            Messages.gui("playlist.song-count", "count" to pl.songCount.toString()),
-            Messages.gui("playlist.platform", "platform" to platformName(pl.platform)),
-            if (pl.isGlobal) "&7来源: &b全服" else Messages.gui("playlist.owner", "owner" to pl.owner)
-        )
-        // 若有自定义重命名, 显示原始名
-        if (hasRename) {
-            lore.add("&7原始名: &f${pl.name}")
-        }
-
-        // 状态标记
-        when {
-            pl.isHistory -> {
-                lore.add("&7自动记录每次点歌")
-                lore.add(if (pl.isPublic) Messages.gui("playlist.public") else Messages.gui("playlist.private"))
-                lore.add(Messages.gui("playlist.public-toggle-hint"))
-            }
-            pl.isOwn -> {
-                lore.add(if (pl.isPublic) Messages.gui("playlist.public") else Messages.gui("playlist.private"))
-                lore.add(Messages.gui("playlist.public-toggle-hint"))
-            }
-            pl.isFavorite -> {
-                lore.add(Messages.gui("playlist.favorite-marked"))
-            }
-        }
-
-        if (!pl.isOwn && !pl.isHistory) {
-            lore.add(Messages.gui("playlist.favorite-add-hint"))
-        }
-        lore.add("")
-        lore.add(Messages.gui("playlist.click-detail"))
-
-        // 分类前缀和材质
         val (prefix, mat) = when {
             pl.isHistory -> "&d[历史] " to Material.MUSIC_DISC_PIGSTEP
             pl.isOwn -> "&a[个人] " to Material.MUSIC_DISC_CAT
@@ -198,7 +118,34 @@ object PlaylistBrowserGui : ZGui {
             else -> "&b[全服] " to Material.MUSIC_DISC_CHIRP
         }
 
-        inv.setItem(slot, Items.build(mat, "$prefix&f$displayName", *lore.toTypedArray()))
+        val ownerLine = if (pl.isGlobal) "&7来源: &b全服" else Messages.gui("playlist.owner", "owner" to pl.owner)
+        val statusLine = when {
+            pl.isHistory -> {
+                val pub = if (pl.isPublic) Messages.gui("playlist.public") else Messages.gui("playlist.private")
+                "$pub &7| ${Messages.gui("playlist.public-toggle-hint")}"
+            }
+            pl.isOwn -> {
+                val pub = if (pl.isPublic) Messages.gui("playlist.public") else Messages.gui("playlist.private")
+                "$pub &7| ${Messages.gui("playlist.public-toggle-hint")}"
+            }
+            pl.isFavorite -> Messages.gui("playlist.favorite-marked")
+            else -> Messages.gui("playlist.favorite-add-hint")
+        }
+
+        val dynDef = GuiLoader.getDef("playlist_browser")?.dynamic
+        val name = GuiLoader.applyPlaceholders(dynDef?.templateName ?: "&f{name}",
+            mapOf("name" to "$prefix&f$displayName"))
+        val lore = (dynDef?.templateLore ?: emptyList()).map { line ->
+            GuiLoader.applyPlaceholders(line, mapOf(
+                "count" to pl.songCount.toString(),
+                "platform" to platformName(pl.platform),
+                "owner_line" to ownerLine,
+                "status_line" to statusLine,
+                "name" to displayName
+            ))
+        }
+
+        return GuiLoader.DynamicItem(name, lore, mat, glow = false)
     }
 
     override fun handleClick(player: Player, slot: Int) {
@@ -209,38 +156,23 @@ object PlaylistBrowserGui : ZGui {
     fun handleClickWithEvent(player: Player, slot: Int, isShift: Boolean, isRight: Boolean) {
         val state = states[player] ?: return
 
-        // 底部操作按钮
-        when (slot) {
-            SLOT_IMPORT -> { openImportMenu(player); return }
-            SLOT_SEARCH -> { openSearchPrompt(player); return }
-            SLOT_PREV -> { state.page = (state.page - 1).coerceAtLeast(0); render(player); return }
-            SLOT_BACK -> { MainGui.open(player); return }
-            SLOT_REFRESH -> { PlaylistManager.refresh(player); open(player); return }
-            SLOT_NEXT -> {
-                val sorted = PlaylistManager.sortForDisplay(player, state.all)
-                val maxPage = ((sorted.size + PER_PAGE - 1) / PER_PAGE) - 1
-                state.page = (state.page + 1).coerceAtMost(maxOf(0, maxPage))
-                render(player); return
-            }
-            48 -> { MainGui.openWebsite(player); return }
-        }
-
-        // 搜索结果 GUI 的翻页/返回按钮
+        // 搜索结果视图优先处理
         if (state.searchResults.isNotEmpty()) {
-            when (slot) {
-                SLOT_SEARCH_PREV -> { state.searchPage = (state.searchPage - 1).coerceAtLeast(0); renderSearchResults(player); return }
-                SLOT_SEARCH_BACK -> { state.searchResults = emptyList(); state.searchPage = 0; render(player); return }
-                SLOT_SEARCH_NEXT -> {
+            val searchHandler = GuiLoader.getClickHandler("playlist_search", slot)
+            when (searchHandler) {
+                "prev-page" -> { state.searchPage = (state.searchPage - 1).coerceAtLeast(0); renderSearchResults(player); return }
+                "back" -> { state.searchResults = emptyList(); state.searchPage = 0; render(player); return }
+                "next-page" -> {
                     val maxPage = ((state.searchResults.size + SEARCH_PER_PAGE - 1) / SEARCH_PER_PAGE) - 1
                     state.searchPage = (state.searchPage + 1).coerceAtMost(maxOf(0, maxPage))
                     renderSearchResults(player); return
                 }
             }
-            // 搜索结果点击 (导入该歌单)
-            val slots = (10..16) + (19..25) + (28..34) + (37..43)
-            val idx = slots.indexOf(slot)
-            if (idx >= 0) {
-                val actualIdx = state.searchPage * SEARCH_PER_PAGE + idx
+            // 搜索结果动态槽位点击 (导入该歌单)
+            val searchSlots = GuiLoader.getDynamicSlots("playlist_search")
+            val sIdx = searchSlots.indexOf(slot)
+            if (sIdx >= 0) {
+                val actualIdx = state.searchPage * SEARCH_PER_PAGE + sIdx
                 val pl = state.searchResults.getOrNull(actualIdx)
                 if (pl != null) {
                     state.searchResults = emptyList()
@@ -251,9 +183,26 @@ object PlaylistBrowserGui : ZGui {
             }
         }
 
-        // 歌单点击
-        val slots = (10..16) + (19..25) + (28..34) + (37..43)
-        val idx = slots.indexOf(slot)
+        // 主视图按钮
+        val handler = GuiLoader.getClickHandler("playlist_browser", slot)
+        when (handler) {
+            "import" -> { openImportMenu(player); return }
+            "search-playlist" -> { openSearchPrompt(player); return }
+            "prev-page" -> { state.page = (state.page - 1).coerceAtLeast(0); render(player); return }
+            "back" -> { MainGui.open(player); return }
+            "refresh" -> { PlaylistManager.refresh(player); open(player); return }
+            "next-page" -> {
+                val sorted = PlaylistManager.sortForDisplay(player, state.all)
+                val maxPage = ((sorted.size + PER_PAGE - 1) / PER_PAGE) - 1
+                state.page = (state.page + 1).coerceAtMost(maxOf(0, maxPage))
+                render(player); return
+            }
+            "credits" -> { MainGui.openWebsite(player); return }
+        }
+
+        // 歌单动态槽位点击
+        val dynSlots = GuiLoader.getDynamicSlots("playlist_browser")
+        val idx = dynSlots.indexOf(slot)
         if (idx < 0) return
 
         val sorted = PlaylistManager.sortForDisplay(player, state.all)
@@ -262,14 +211,12 @@ object PlaylistBrowserGui : ZGui {
 
         when {
             isRight && (pl.isOwn || pl.isHistory) -> {
-                // 公开/隐私切换 (个人歌单 + 历史歌单均支持)
                 val made = PlayerSettings.togglePublic(player, pl.platform, pl.id)
                 player.sendMessage(Items.color("${Messages.prefix()} ${if (made) Messages.player("public-toggled-on") else Messages.player("public-toggled-off")}"))
                 PlaylistManager.refresh(player)
                 open(player)
             }
             isShift -> {
-                // 收藏/取消收藏 (历史歌单和个人歌单不可收藏)
                 if (pl.isOwn || pl.isHistory) {
                     player.sendMessage(Items.color("${Messages.prefix()} ${Messages.player("cant-favorite-own")}"))
                     return
@@ -314,43 +261,38 @@ object PlaylistBrowserGui : ZGui {
             render(player)
             return
         }
-
         val holder = GuiHolder(this)
-        val inv = holder.create(54, Items.deserialize("&6&l🔍 歌单搜索结果"))
 
-        // 边框
-        for (i in 0..8) inv.setItem(i, Items.border())
-        for (i in 45..53) inv.setItem(i, Items.border())
-        for (r in 0..5) { inv.setItem(r * 9, Items.border()); inv.setItem(r * 9 + 8, Items.border()) }
+        val totalPages = maxOf(1, ((results.size + SEARCH_PER_PAGE - 1) / SEARCH_PER_PAGE))
+        val placeholders = mapOf(
+            "count" to results.size.toString(),
+            "current" to (state.searchPage + 1).toString(),
+            "total_pages" to totalPages.toString()
+        )
 
-        inv.setItem(4, Items.build(Material.COMPASS, "&6&l搜索结果",
-            "&7共找到 &f${results.size} &7个歌单",
-            "&7点击歌单即可导入"))
-
-        // 歌单列表
-        val startIdx = state.searchPage * SEARCH_PER_PAGE
-        val pageList = results.drop(startIdx).take(SEARCH_PER_PAGE)
-        val slots = (10..16) + (19..25) + (28..34) + (37..43)
-        for (i in pageList.indices) {
-            val slot = slots.getOrNull(i) ?: break
-            val pl = pageList[i]
-            val playCountStr = if (pl.playCount >= 10000) "${pl.playCount / 10000}万" else pl.playCount.toString()
-            inv.setItem(slot, Items.build(Material.MUSIC_DISC_CAT,
-                "&f${pl.name}",
-                "&7创建者: &f${pl.creator}",
-                "&7歌曲数: &f${pl.trackCount}",
-                "&7播放量: &f$playCountStr",
-                "",
-                "&a▸ 点击导入此歌单"))
+        val inv = GuiLoader.render("playlist_search", holder, placeholders) ?: run {
+            player.sendMessage(Items.color("${Messages.prefix()} &cGUI 配置 playlist_search.yml 缺失"))
+            return
         }
 
-        // 底部按钮
-        val totalPages = maxOf(1, ((results.size + SEARCH_PER_PAGE - 1) / SEARCH_PER_PAGE))
-        inv.setItem(SLOT_SEARCH_PREV, Items.build(Material.ARROW, "&f上一页",
-            "&7第 ${state.searchPage + 1}/$totalPages 页"))
-        inv.setItem(SLOT_SEARCH_BACK, Items.back())
-        inv.setItem(SLOT_SEARCH_NEXT, Items.build(Material.ARROW, "&f下一页",
-            "&7第 ${state.searchPage + 1}/$totalPages 页"))
+        // 动态填充搜索结果
+        val startIdx = state.searchPage * SEARCH_PER_PAGE
+        val pageList = results.drop(startIdx).take(SEARCH_PER_PAGE)
+        val dynDef = GuiLoader.getDef("playlist_search")?.dynamic
+        val dynItems = pageList.map { pl ->
+            val playCountStr = if (pl.playCount >= 10000) "${pl.playCount / 10000}万" else pl.playCount.toString()
+            val name = GuiLoader.applyPlaceholders(dynDef?.templateName ?: "&f{name}", mapOf("name" to pl.name))
+            val lore = (dynDef?.templateLore ?: emptyList()).map { line ->
+                GuiLoader.applyPlaceholders(line, mapOf(
+                    "creator" to pl.creator,
+                    "count" to pl.trackCount.toString(),
+                    "plays" to playCountStr,
+                    "name" to pl.name
+                ))
+            }
+            GuiLoader.DynamicItem(name, lore, Material.MUSIC_DISC_CAT, glow = false)
+        }
+        GuiLoader.fillDynamic(inv, "playlist_search", dynItems)
 
         player.openInventory(inv)
         Debug.debug("歌单搜索结果: ${player.name} 共 ${results.size} 个, 第 ${state.searchPage + 1} 页")
@@ -385,7 +327,6 @@ object PlaylistBrowserGui : ZGui {
 
     /** 处理歌单导入输入 (由 ChatListener 调用) */
     fun handleImportInput(player: Player, input: String) {
-        // 提取歌单 ID (支持链接或纯数字)
         val playlistId = extractPlaylistId(input)
         if (playlistId.isEmpty()) {
             player.sendMessage(Items.color("${Messages.prefix()} &c无法解析歌单 ID"))
@@ -411,7 +352,6 @@ object PlaylistBrowserGui : ZGui {
                 return@Runnable
             }
 
-            // 保存到玩家歌单目录 (默认隐私)
             val isPrivate = Config.playlistDefaultPrivate()
             try {
                 PlaylistManager.saveImportedPlaylist(player, playlist, isPrivate)
@@ -435,9 +375,7 @@ object PlaylistBrowserGui : ZGui {
     /** 从输入中提取歌单 ID (支持纯数字 / https://music.163.com/playlist/123456 / ...id=123456) */
     private fun extractPlaylistId(input: String): String {
         val trimmed = input.trim()
-        // 纯数字
         if (trimmed.matches(Regex("^\\d+$"))) return trimmed
-        // URL: ...playlist/{id} 或 ...id={id}
         val urlMatch = Regex("""(?:playlist/|id=)(\d+)""").find(trimmed)
         return urlMatch?.groupValues?.get(1) ?: ""
     }

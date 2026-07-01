@@ -6,47 +6,24 @@ import com.ourcraft.zmusicgui.manager.Messages
 import com.ourcraft.zmusicgui.manager.PlayerSettings
 import com.ourcraft.zmusicgui.manager.SearchService
 import com.ourcraft.zmusicgui.util.Items
-import org.bukkit.Material
 import org.bukkit.entity.Player
 
 /**
- * 个人设置 v3.0.0 — 默认源循环切换 + 歌词模式循环切换
+ * 个人设置 v3.0.1 — TrMenu 风格 YAML 自定义
  *
- * 支持 3 个源: 网易云 / 酷狗 / 酷我
- * 所有源共用 OurMusicApi (调用 ourcraft-music-api 服务端)
+ * 布局由 GUI/settings.yml 定义, 代码负责:
+ *  - 填充占位符 (source_name/source_count/next_source/lyric_mode)
+ *  - 点击路由 (source/lyric/back/credits)
+ *  - 源循环切换 + 歌词模式循环切换
  */
 object SettingsGui : ZGui {
 
-    private const val SLOT_SOURCE = 11
-    private const val SLOT_LYRIC = 13
-    private const val SLOT_BACK = 22
-
     override fun open(player: Player) {
         val holder = GuiHolder(this)
-        val inv = holder.create(27, Items.deserialize("&6&l⚙ 个人设置"))
 
-        for (i in 0..8) { inv.setItem(i, Items.border()); inv.setItem(i + 18, Items.border()) }
-        inv.setItem(9, Items.border()); inv.setItem(17, Items.border())
-
-        // 当前默认源
         val currentSource = PlayerSettings.getCurrentSource(player)
         val sourceName = SearchService.sourceName(currentSource)
-        inv.setItem(4, Items.build(Material.COMPARATOR, "&6&l⚙ 个人设置",
-            "&7默认音乐源: $sourceName", "",
-            "&7点击下方切换源", "&7共 ${SearchService.SUPPORTED_SOURCES.size} 个源可选",
-            "&7网易云由 &fYuncan &7提供 API"))
-
-        // 源切换按钮 (点击循环切换)
         val nextSource = nextSource(currentSource)
-        inv.setItem(SLOT_SOURCE, Items.buildGlowing(Material.MUSIC_DISC_CAT,
-            "&f🎵 音乐源: $sourceName",
-            "&7点击循环切换音乐源",
-            "&7当前: $sourceName",
-            "&b▸ 下一个: ${SearchService.sourceName(nextSource)}",
-            "",
-            "&7支持: &c网易云 &7| &a酷狗 &7| &6酷我"))
-
-        // 歌词显示模式切换
         val settings = PlayerSettings.getSettings(player)
         val modeText = if (settings.lyricEnabled) {
             if (settings.lyricMode == LyricMode.BOSSBAR)
@@ -54,30 +31,39 @@ object SettingsGui : ZGui {
             else
                 "&8BossBar &7/ &aActionBar"
         } else "&c已关闭"
-        inv.setItem(SLOT_LYRIC, Items.build(Material.WRITABLE_BOOK, "&b&l歌词显示",
-            "&7点击循环切换显示模式", "&7当前: $modeText", "",
-            "&7循环: 关闭 → BossBar → ActionBar → 关闭",
-            "&7BossBar: 顶部血条样式", "&7ActionBar: 物品栏上方"))
 
-        // 槽位 15 留空 (原账号管理入口已移除)
+        val placeholders = mapOf(
+            "source_name" to sourceName,
+            "source_count" to SearchService.SUPPORTED_SOURCES.size.toString(),
+            "next_source" to SearchService.sourceName(nextSource),
+            "lyric_mode" to modeText
+        )
 
-        inv.setItem(SLOT_BACK, Items.back())
-        if (Config.showCredits()) inv.setItem(18, Items.credits())
+        val inv = GuiLoader.render("settings", holder, placeholders) ?: run {
+            player.sendMessage(Items.color("${Messages.prefix()} &cGUI 配置 settings.yml 缺失"))
+            return
+        }
+
+        if (!Config.showCredits()) {
+            GuiLoader.getIconAt("settings", 18)?.let {
+                if (it.clickHandler == "credits") inv.setItem(18, Items.border())
+            }
+        }
 
         player.openInventory(inv)
     }
 
     override fun handleClick(player: Player, slot: Int) {
-        when (slot) {
-            SLOT_SOURCE -> {
-                // 循环切换到下一个源
+        val handler = GuiLoader.getClickHandler("settings", slot) ?: return
+        when (handler) {
+            "source" -> {
                 val current = PlayerSettings.getCurrentSource(player)
                 val next = nextSource(current)
                 PlayerSettings.setCurrentSource(player, next)
                 player.sendMessage(Items.color("${Messages.prefix()} &a音乐源已切换为: ${SearchService.sourceName(next)}"))
                 open(player)
             }
-            SLOT_LYRIC -> {
+            "lyric" -> {
                 // 切换歌词显示模式: 关闭 → BossBar → ActionBar → 关闭
                 val s = PlayerSettings.getSettings(player)
                 when {
@@ -94,8 +80,8 @@ object SettingsGui : ZGui {
                 }
                 open(player)
             }
-            18 -> MainGui.openWebsite(player)
-            SLOT_BACK -> MainGui.open(player)
+            "credits" -> MainGui.openWebsite(player)
+            "back" -> MainGui.open(player)
         }
     }
 

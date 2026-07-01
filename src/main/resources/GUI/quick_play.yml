@@ -1,0 +1,71 @@
+title: "快捷点歌"
+size: 27
+border:
+  enabled: true
+  material: LIGHT_BLUE_STAINED_GLASS_PANE
+icons:
+  title-icon:
+    slot: 4
+    material: NETHER_STAR
+    name: "&6&l🎵 快捷点歌"
+    lore:
+      - "&7输入歌名 → 展示搜索结果 → 选歌播放"
+      - ""
+      - "&f当前源: &a{source}"
+      - "{scope_icon}&f当前范围: {scope}"
+      - ""
+      - "&a▸ 点击下方搜索按钮开始"
+    glow: false
+    click: none
+  search:
+    slot: 11
+    material: OAK_SIGN
+    name: "&a&l⌨  搜索播放"
+    lore:
+      - "&7点击后在聊天栏输入歌名"
+      - "&7将展示搜索结果列表选歌播放"
+      - ""
+      - "&a▸ 点击开始点歌"
+    glow: true
+    click: search
+  scope:
+    slot: 13
+    material: GREEN_CONCRETE
+    name: "&f📍 播放范围"
+    lore:
+      - "&7点击循环切换范围"
+      - ""
+      - "{scope_icon}&f当前: {scope}"
+      - "&7{scope_desc}"
+      - ""
+      - "&b▸ 点击切换"
+    glow: false
+    click: scope
+  push:
+    slot: 15
+    material: BOOKSHELF
+    name: "&d&l📚 歌单推送"
+    lore:
+      - "&7将整个歌单推给范围内的人"
+      - "{scope_icon}&f目标: {scope}"
+      - "&7范围内玩家可点 [顺序] 或 [随机]"
+      - ""
+      - "&d▸ 点击选择歌单"
+    glow: true
+    click: push
+  back:
+    slot: 22
+    material: OAK_DOOR
+    name: "&a← 返回主菜单"
+    lore:
+      - "&7点击回到主页"
+    glow: false
+    click: back
+  credits:
+    slot: 26
+    material: KNOWLEDGE_BOOK
+    name: "&8&l📖  关于"
+    lore:
+      - "&7GUI插件作者: &fYuncan"
+    glow: false
+    click: credits

@@ -1,0 +1,85 @@
+title: "播放控制"
+size: 36
+border:
+  enabled: true
+  material: LIGHT_BLUE_STAINED_GLASS_PANE
+icons:
+  divider:
+    slot: 4
+    material: NAME_TAG
+    name: "&8▬▬▬ &6&l当前播放 &8▬▬▬"
+    lore:
+      - "&7"
+    glow: false
+    click: none
+  now-playing:
+    slot: 13
+    material: MUSIC_DISC_13
+    name: "&b&l♪  正在播放"
+    lore:
+      - "&f歌名: &e{song_name}"
+      - "&f歌手: &d{singer}"
+      - "&f进度: &a{current} &7/ &a{max}"
+      - "&7平台: &f{source}"
+      - "{priority_info}"
+      - "{queue_info}"
+    glow: false
+    click: refresh
+  prev:
+    slot: 20
+    material: ARROW
+    name: "&a◀ 上一首"
+    lore:
+      - "{history_info}"
+    glow: false
+    click: prev
+  stop:
+    slot: 21
+    material: REDSTONE_BLOCK
+    name: "&c&l⏹  停止播放"
+    lore: []
+    glow: false
+    click: stop
+  next:
+    slot: 22
+    material: ARROW
+    name: "&a下一首 ▶"
+    lore:
+      - "{next_info}"
+    glow: false
+    click: next
+  mode:
+    slot: 23
+    material: COMPARATOR
+    name: "&6&l播放模式"
+    lore:
+      - "&7当前: {mode}"
+      - "&7点击循环切换"
+    glow: false
+    click: mode
+  playlist:
+    slot: 24
+    material: CHEST
+    name: "&6📋 播放列表"
+    lore:
+      - "{queue_info}"
+      - "{priority_info}"
+      - ""
+      - "&a▸ 点击查看播放列表"
+    glow: false
+    click: playlist
+  back:
+    slot: 31
+    material: OAK_DOOR
+    name: "&a← 返回主菜单"
+    lore:
+      - "&7点击回到主页"
+    glow: false
+    click: back
+  credits:
+    slot: 27
+    material: KNOWLEDGE_BOOK
+    name: "&8&l📖  关于"
+    lore: []
+    glow: false
+    click: credits

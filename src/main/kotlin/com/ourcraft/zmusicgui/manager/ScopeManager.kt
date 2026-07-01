@@ -70,12 +70,29 @@ object ScopeManager {
     private var residencePlugin: Plugin? = null
     private var plotSquaredPlugin: Plugin? = null
 
+    /** 当前领地插件 provider (由 config.yml scope.region-plugin 决定) */
+    private var regionProvider: RegionProvider = NoRegionProvider
+
     fun setup() {
-        residencePlugin = Bukkit.getPluginManager().getPlugin("Residence")
-        if (residencePlugin != null) {
-            Debug.info(">> Residence 已检测到 (版本: ${residencePlugin!!.description.version}, 类: ${residencePlugin!!.javaClass.name})，支持领地范围播放")
-            // 启动时测试 Residence API (诊断用, 输出到控制台)
-            testResidenceApi()
+        // 根据配置选择领地插件 provider
+        val pluginType = Config.regionPlugin()
+        regionProvider = when (pluginType) {
+            "lands" -> LandsProvider()
+            "dominion" -> DominionProvider()
+            else -> ResidenceProvider(this)
+        }
+        Debug.info(">> 领地插件类型: ${regionProvider.typeId} (来自 config.yml scope.region-plugin)")
+
+        // Residence 特殊: 需要先设置 residencePlugin 字段供文件读取/API 反射使用
+        if (regionProvider is ResidenceProvider) {
+            residencePlugin = Bukkit.getPluginManager().getPlugin("Residence")
+            if (residencePlugin != null) {
+                Debug.info(">> Residence 已检测到 (版本: ${residencePlugin!!.description.version}, 类: ${residencePlugin!!.javaClass.name})，支持领地范围播放")
+                testResidenceApi()
+            }
+        } else {
+            // Lands / Dominion 由 provider 自行初始化
+            regionProvider.setup()
         }
 
         plotSquaredPlugin = Bukkit.getPluginManager().getPlugin("PlotSquared")
@@ -132,24 +149,31 @@ object ScopeManager {
         }
     }
 
-    fun hasResidence(): Boolean = residencePlugin != null
+    fun hasResidence(): Boolean = regionProvider.isAvailable()
     fun hasPlotSquared(): Boolean = plotSquaredPlugin != null
+
+    /** Residence provider 是否就绪 (供 ResidenceProvider.isAvailable 委托) */
+    fun hasResidenceImpl(): Boolean = residencePlugin != null
 
     fun fromId(id: String): Scope = Scope.from(id)
 
     fun isAvailable(player: Player, scope: Scope): Boolean = when (scope) {
         Scope.SELF -> true
         Scope.RESIDENCE -> {
-            if (residencePlugin == null) {
-                player.sendMessage(Items.color("${Messages.prefix()} &cResidence 插件未加载"))
+            if (!regionProvider.isAvailable()) {
+                player.sendMessage(Items.color("${Messages.prefix()} &c领地插件未加载 (${regionProvider.typeId})"))
                 false
             } else {
-                val name = getCurrentResidenceName(player)
+                val name = regionProvider.getRegionName(player)
                 if (name == null) {
-                    // 领地检测失败, 发送诊断信息给玩家
-                    val diag = diagnoseResidence(player)
-                    for (line in diag.split("\n")) {
-                        if (line.isNotBlank()) player.sendMessage(Items.color(line))
+                    // 领地检测失败, 发送诊断信息给玩家 (仅 Residence 有详细诊断, Lands/Dominion 简单提示)
+                    if (regionProvider is ResidenceProvider) {
+                        val diag = diagnoseResidence(player)
+                        for (line in diag.split("\n")) {
+                            if (line.isNotBlank()) player.sendMessage(Items.color(line))
+                        }
+                    } else {
+                        player.sendMessage(Items.color("${Messages.prefix()} &7你不在任何领地内 (${regionProvider.typeId})"))
                     }
                     false
                 } else {
@@ -167,14 +191,14 @@ object ScopeManager {
      */
     fun getTargets(player: Player, scope: Scope): List<Player> = when (scope) {
         Scope.SELF -> listOf(player)
-        Scope.RESIDENCE -> getPlayersInResidence(player)
+        Scope.RESIDENCE -> regionProvider.getPlayersInRegion(player)
         Scope.PLOT -> getPlayersInPlot(player)
         Scope.WORLD -> player.world.players.toList()
         Scope.SERVER -> Bukkit.getOnlinePlayers().toList()
     }
 
     fun describeScope(player: Player, scope: Scope): String? = when (scope) {
-        Scope.RESIDENCE -> getCurrentResidenceName(player)?.let { "领地: $it" }
+        Scope.RESIDENCE -> regionProvider.getRegionName(player)?.let { "领地: $it" }
         Scope.PLOT -> getCurrentPlotId(player)?.let { "地皮: $it" }
         Scope.WORLD -> player.world.name
         Scope.SERVER -> "全服"
@@ -344,7 +368,7 @@ object ScopeManager {
 
     /** 获取收款人 */
     private fun getPayee(player: Player, scope: Scope): OfflinePlayer? = when (scope) {
-        Scope.RESIDENCE -> getResidenceOwner(player)
+        Scope.RESIDENCE -> regionProvider.getRegionOwner(player)
         Scope.PLOT -> getPlotOwner(player)
         Scope.WORLD -> {
             val account = Config.worldPayeeAccount()
@@ -383,9 +407,13 @@ object ScopeManager {
         Debug.debug("发送同意请求: target=${target.name} requester=${requester.name} song=$songName reqId=$idShort")
     }
 
-    // ==================== Residence (反射) ====================
+    // ==================== Residence (反射) — 原实现, 供 ResidenceProvider 委托 ====================
 
-    fun getCurrentResidenceName(player: Player): String? {
+    /** 公开 API: 获取玩家当前领地名 (委托给 regionProvider) */
+    fun getCurrentResidenceName(player: Player): String? = regionProvider.getRegionName(player)
+
+    /** Residence 原实现 (文件读取 + API 反射), 供 ResidenceProvider 委托调用 */
+    fun getResidenceNameImpl(player: Player): String? {
         if (residencePlugin == null) return null
 
         // 方式A (主): 直接读取 Residence save 文件 (不依赖 WorldGuard, 不依赖 API 反射)
@@ -659,7 +687,8 @@ object ScopeManager {
         return null
     }
 
-    private fun getResidenceOwner(player: Player): OfflinePlayer? {
+    /** Residence 原实现: 获取领地拥有者 (供 ResidenceProvider 委托) */
+    fun getResidenceOwnerImpl(player: Player): OfflinePlayer? {
         val resName = getCurrentResidenceName(player) ?: return null
         return try {
             val residence = residencePlugin!!
@@ -675,7 +704,8 @@ object ScopeManager {
         }
     }
 
-    private fun getPlayersInResidence(requester: Player): List<Player> {
+    /** Residence 原实现: 获取同领地玩家 (供 ResidenceProvider 委托) */
+    fun getPlayersInResidenceImpl(requester: Player): List<Player> {
         val resName = getCurrentResidenceName(requester) ?: return listOf(requester)
         val targets = mutableListOf<Player>()
         for (p in Bukkit.getOnlinePlayers()) {

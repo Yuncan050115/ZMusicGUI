@@ -1,0 +1,49 @@
+title: "搜索结果"
+size: 54
+border:
+  enabled: true
+  material: LIGHT_BLUE_STAINED_GLASS_PANE
+icons:
+  title-icon:
+    slot: 4
+    material: COMPASS
+    name: "&6&l搜索结果"
+    lore:
+      - "&7共找到 &f{count} &7个歌单"
+      - "&7点击歌单即可导入"
+    glow: false
+    click: none
+  prev-page:
+    slot: 45
+    material: ARROW
+    name: "&f上一页"
+    lore:
+      - "&7第 {current}/{total} 页"
+    glow: false
+    click: prev-page
+  back:
+    slot: 49
+    material: OAK_DOOR
+    name: "&a← 返回"
+    lore: []
+    glow: false
+    click: back
+  next-page:
+    slot: 53
+    material: ARROW
+    name: "&f下一页"
+    lore:
+      - "&7第 {current}/{total} 页"
+    glow: false
+    click: next-page
+dynamic:
+  slots: [10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43]
+  template:
+    material: MUSIC_DISC_CAT
+    name: "&f{name}"
+    lore:
+      - "&7创建者: &f{creator}"
+      - "&7歌曲数: &f{count}"
+      - "&7播放量: &f{plays}"
+      - ""
+      - "&a▸ 点击导入此歌单"

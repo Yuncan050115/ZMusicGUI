@@ -1,0 +1,78 @@
+title: "&6&l{playlist_name}"
+size: 54
+border:
+  enabled: true
+  material: LIGHT_BLUE_STAINED_GLASS_PANE
+icons:
+  title-icon:
+    slot: 4
+    material: NETHER_STAR
+    name: "&6&l{playlist_name}"
+    lore:
+      - "&7歌曲: &f{count} 首"
+      - "&7平台: &f{platform}"
+      - "{owner_line}"
+      - "{rename_line}"
+      - ""
+      - "&a▸ 点击歌曲播放"
+    glow: false
+    click: none
+  rename:
+    slot: 39
+    material: ANVIL
+    name: "&e&l✎ 重命名歌单"
+    lore:
+      - "&7本地重命名此歌单 (不影响外部平台)"
+      - ""
+      - "&a▸ 点击输入新名称"
+      - "&c输入空 &7恢复原名"
+    glow: false
+    click: rename
+  prev-page:
+    slot: 40
+    material: ARROW
+    name: "&a⬆ 上一页"
+    lore:
+      - "&7第 {current}/{total} 页"
+    glow: false
+    click: prev-page
+  next-page:
+    slot: 42
+    material: ARROW
+    name: "&a⬇ 下一页"
+    lore:
+      - "&7第 {current}/{total} 页"
+    glow: false
+    click: next-page
+  favorite:
+    slot: 44
+    material: GOLD_NUGGET
+    name: "&6&l☆ 收藏歌单"
+    lore:
+      - "&7点击收藏此歌单"
+    glow: false
+    click: favorite
+  back:
+    slot: 49
+    material: OAK_DOOR
+    name: "&a← 返回"
+    lore: []
+    glow: false
+    click: back
+  credits:
+    slot: 53
+    material: KNOWLEDGE_BOOK
+    name: "&8&l📖  关于"
+    lore: []
+    glow: false
+    click: credits
+dynamic:
+  slots: [10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34]
+  template:
+    material: PAPER
+    name: "&f{index}. {name}"
+    lore:
+      - "&7歌手: &f{singer}"
+      - "&7ID: &8{id}"
+      - ""
+      - "&a▸ 点击播放 (个人)"

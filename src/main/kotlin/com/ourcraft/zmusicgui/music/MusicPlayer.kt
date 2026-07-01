@@ -64,7 +64,9 @@ object MusicPlayer {
         // pushToQueue 添加到这里, onSongEnd 优先消费此队列
         var priorityQueue: MutableList<OurMusicApi.SongDetail> = mutableListOf(),
         // 播放历史栈 (用于"上一首"在随机模式下回退到实际上一首)
-        var historyStack: MutableList<OurMusicApi.SongDetail> = mutableListOf()
+        var historyStack: MutableList<OurMusicApi.SongDetail> = mutableListOf(),
+        // 歌曲结束/切换中标记, 防止懒加载期间定时器重复触发 onSongEnd 导致重复切歌
+        var ending: Boolean = false
     )
 
     private val states = ConcurrentHashMap<Player, PlayState>()
@@ -102,6 +104,8 @@ object MusicPlayer {
                           skipHistoryPush: Boolean = false) {
         // 懒加载: 如果 url 为空 (歌单懒加载的后续歌曲), 异步获取详情后再播放
         if (song.url.isEmpty() && song.id.isNotEmpty()) {
+            // 标记当前状态为"切换中", 防止定时器在异步获取期间重复触发 onSongEnd (导致重复切歌)
+            states[player]?.ending = true
             player.sendMessage(Items.color("${Messages.prefix()} &7正在加载: &f${song.name}..."))
             val queueRef = playlistQueue
             val idxRef = playlistIndex
@@ -181,8 +185,9 @@ object MusicPlayer {
 
             // v3.0.1: BossBar/ActionBar 显示由 LyricDisplayManager 统一管理
 
-            // 播放结束
-            if (s.currentTime >= s.song.time && s.song.time > 0) {
+            // 播放结束 (ending 标记防止懒加载期间重复触发)
+            if (s.currentTime >= s.song.time && s.song.time > 0 && !s.ending) {
+                s.ending = true
                 onSongEnd(player, s)
             }
         }, 20L, 20L)

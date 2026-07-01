@@ -1,0 +1,89 @@
+title: "Ourcraft 音乐中心"
+size: 45
+border:
+  enabled: true
+  material: LIGHT_BLUE_STAINED_GLASS_PANE
+icons:
+  welcome:
+    slot: 4
+    material: NETHER_STAR
+    name: "&6&l☄ &e&lOurcraft 音乐中心 &6&l☄"
+    lore:
+      - "&7内置 Mod 通信 · 网易云 API"
+      - "&7Author: Yuncan · Ourcraft"
+    glow: false
+    click: none
+  quick-play:
+    slot: 20
+    material: MUSIC_DISC_CAT
+    name: "&a&l🎵  快捷点歌"
+    lore:
+      - "&7输入歌名即可播放"
+      - "&a个人 &7/&6领地 &7/&d地皮 &7/&b世界 &7/&e全服"
+      - ""
+      - "&a▸ 点击开始"
+    glow: true
+    click: quick-play
+  playlists:
+    slot: 24
+    material: BOOKSHELF
+    name: "&6&l📖  歌单"
+    lore:
+      - "&7统一展示所有歌单"
+      - "&a个人 &7(&e置顶&7) + &e收藏 &7(&e置顶&7) + &b全服"
+      - "&7新导入歌单默认隐私, 可右键切换公开"
+      - "&7支持链接和搜索两种方式导入"
+      - ""
+      - "&6▸ 点击查看"
+    glow: false
+    click: playlists
+  control:
+    slot: 30
+    material: JUKEBOX
+    name: "&d&l⏯  播放控制"
+    lore:
+      - "&7停止 / 当前播放信息"
+      - ""
+      - "&d▸ 点击查看"
+    glow: false
+    click: control
+  settings:
+    slot: 32
+    material: COMPARATOR
+    name: "&e&l⚙  个人设置"
+    lore:
+      - "&7默认源 · 歌词设置"
+      - ""
+      - "&e▸ 点击设置"
+    glow: false
+    click: settings
+  location:
+    slot: 22
+    material: COMPASS
+    name: "&e&l📍  当前位置"
+    lore:
+      - "&6领地: &f{residence}"
+      - "&d地皮: &f{plot}"
+      - ""
+      - "&7点歌时可选对应范围"
+    glow: false
+    click: none
+  close:
+    slot: 40
+    material: BARRIER
+    name: "&c✕ 关闭菜单"
+    lore:
+      - "&7点击关闭"
+    glow: false
+    click: close
+  credits:
+    slot: 36
+    material: KNOWLEDGE_BOOK
+    name: "&8&l📖  关于"
+    lore:
+      - "&7GUI插件作者: &fYuncan"
+      - "&7ZMusic插件作者: &f真心"
+      - "&7CE增强: &f0XiaoMai0"
+      - "&7网站: &fhttps://github.com/Yuncan050115"
+    glow: false
+    click: credits

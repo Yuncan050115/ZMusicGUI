@@ -49,6 +49,8 @@ object Config {
     fun lyricDisplayFormat(): String = yaml.getString("lyric.display-format", "LYRIC")!!
 
     // ==================== 范围点歌 ====================
+    /** 领地插件类型: residence / lands / dominion (用于 RESIDENCE scope 底层实现) */
+    fun regionPlugin(): String = yaml.getString("scope.region-plugin", "residence")!!.lowercase()
     fun scopeCost(scope: String): Double = yaml.getDouble("scope.$scope.cost", 0.0)
     fun scopeRequireApproval(scope: String): Boolean = yaml.getBoolean("scope.$scope.require-approval", true)
     fun scopeApprovalTimeout(): Long = yaml.getLong("scope.approval-timeout-seconds", 60L)
