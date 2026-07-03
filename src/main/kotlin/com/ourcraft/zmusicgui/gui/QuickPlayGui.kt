@@ -239,8 +239,8 @@ object QuickPlayGui : ZGui {
 
         when (scope) {
             Scope.SELF -> playDirect(player, song)
-            Scope.SERVER -> playToAll(player, song)
-            Scope.RESIDENCE, Scope.PLOT, Scope.WORLD -> {
+            Scope.RESIDENCE, Scope.PLOT, Scope.WORLD, Scope.SERVER -> {
+                // 所有非个人范围都走同意机制: 请求者立即播放, 其他人收到通知自行选择
                 ScopeManager.requestPlay(player, scope, PlayerSettings.getCurrentSource(player), song)
             }
         }
@@ -283,42 +283,6 @@ object QuickPlayGui : ZGui {
             SchedulerUtil.runSync(ZMusicGUI.plugin, Runnable {
                 MusicPlayer.play(player, detail)
                 player.sendMessage(Items.color("${Messages.prefix()} ${Messages.player("playing", "name" to song.name, "singer" to song.singer)}"))
-            })
-        })
-    }
-
-    /** 全服播放 (对每个在线玩家调用 MusicPlayer.play) */
-    private fun playToAll(requester: Player, song: OurMusicApi.Song) {
-        val cost = Config.scopeCost("server")
-        if (cost > 0 && EconomyManager.isAvailable && !requester.hasPermission("zmusicgui.bypass")) {
-            if (!EconomyManager.has(requester, cost)) {
-                requester.sendMessage(Items.color("${Messages.prefix()} ${Messages.player("cost-insufficient", "cost" to EconomyManager.format(cost))}"))
-                return
-            }
-            EconomyManager.withdraw(requester, cost)
-            requester.sendMessage(Items.color("${Messages.prefix()} ${Messages.player("cost-charged", "cost" to EconomyManager.format(cost))}"))
-        }
-
-        SchedulerUtil.runAsync(ZMusicGUI.plugin, Runnable {
-            val detail = try { SearchService.getSongDetail(song, requester) } catch (e: Throwable) {
-                SchedulerUtil.runSync(ZMusicGUI.plugin, Runnable {
-                    requester.sendMessage(Items.color("${Messages.prefix()} ${Messages.player("search-failed", "error" to (e.message ?: "未知"))}"))
-                })
-                return@Runnable
-            }
-            if (detail == null || detail.url.isEmpty()) {
-                SchedulerUtil.runSync(ZMusicGUI.plugin, Runnable {
-                    requester.sendMessage(Items.color("${Messages.prefix()} &c获取歌曲播放地址失败"))
-                })
-                return@Runnable
-            }
-            SchedulerUtil.runSync(ZMusicGUI.plugin, Runnable {
-                val targets = requester.server.onlinePlayers.toList()
-                for (target in targets) {
-                    MusicPlayer.play(target, detail)
-                }
-                requester.sendMessage(Items.color("${Messages.prefix()} ${Messages.player("playing-with-scope",
-                    "scope" to Scope.SERVER.display, "count" to targets.size.toString(), "name" to song.name)}"))
             })
         })
     }
