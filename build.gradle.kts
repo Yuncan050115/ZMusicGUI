@@ -1,4 +1,9 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
+import java.io.FileOutputStream
+import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
+import java.util.jar.Attributes
 
 plugins {
     kotlin("jvm") version "2.1.20"
@@ -6,7 +11,7 @@ plugins {
 }
 
 group = "com.ourcraft"
-version = "3.0.3"
+version = "3.1.0"
 
 repositories {
     mavenCentral()
@@ -47,6 +52,37 @@ tasks.shadowJar {
         exclude(dependency("com.github.MilkBowl:VaultAPI:.*"))
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude("META-INF/versions/**")
+    exclude("META-INF/maven/**")
+    // 关键修复: shadow 从 gson/kotlin 依赖继承 Multi-Release: true, 但 Bukkit PluginClassLoader
+    // 不兼容多版本 jar — 看到此标记会在 META-INF/versions/ 查找类, 找不到就不回退到 jar 根目录,
+    // 导致所有类 ClassNotFoundException。manifest{} 块会被 shadow 合并覆盖, 必须 doLast 修改
+    doLast {
+        // shadow 从 gson/kotlin 依赖继承 Multi-Release: true, Bukkit PluginClassLoader 不兼容
+        val src = archiveFile.get().asFile
+        val tmp = File(src.parentFile, src.name + ".tmp")
+        val jf = JarFile(src)
+        val manifest = jf.manifest
+        manifest.mainAttributes.remove(Attributes.Name("Multi-Release"))
+        JarOutputStream(FileOutputStream(tmp), manifest).use { jos ->
+            val buf = ByteArray(8192)
+            for (entry in jf.entries()) {
+                if (entry.name == "META-INF/MANIFEST.MF") continue
+                jos.putNextEntry(entry)
+                jf.getInputStream(entry).use { stream ->
+                    while (true) {
+                        val n = stream.read(buf)
+                        if (n < 0) break
+                        jos.write(buf, 0, n)
+                    }
+                }
+                jos.closeEntry()
+            }
+        }
+        jf.close()
+        src.delete()
+        tmp.renameTo(src)
+    }
 }
 
 tasks.build { dependsOn(tasks.shadowJar) }

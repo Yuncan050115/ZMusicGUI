@@ -313,6 +313,9 @@ object QuickPlayGui : ZGui {
         Scope.SERVER -> Material.YELLOW_CONCRETE
     }
 
+    /** 获取玩家当前选择的播放范围 (供 /zmg push 命令使用) */
+    fun getCurrentScope(player: Player): Scope = states[player]?.scope ?: Scope.SELF
+
     fun cleanup(player: Player) {
         states.remove(player)
     }

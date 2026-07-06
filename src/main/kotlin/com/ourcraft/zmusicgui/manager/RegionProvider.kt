@@ -35,7 +35,7 @@ class ResidenceProvider(private val scopeManager: ScopeManager) : RegionProvider
     override val typeId: String = "residence"
     private var residencePlugin: Plugin? = null
 
-    override fun isAvailable(): Boolean = residencePlugin != null
+    override fun isAvailable(): Boolean = residencePlugin != null || scopeManager.hasResidenceImpl()
 
     override fun setup() {
         residencePlugin = Bukkit.getPluginManager().getPlugin("Residence")

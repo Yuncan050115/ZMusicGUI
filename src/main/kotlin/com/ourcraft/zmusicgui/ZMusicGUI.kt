@@ -44,50 +44,72 @@ class ZMusicGUI : JavaPlugin() {
     override fun onEnable() {
         plugin = this
 
-        Debug.banner()
+        try { Debug.banner() } catch (e: Throwable) { logger.severe("Debug.banner 失败: ${e.javaClass.name}: ${e.message}"); e.printStackTrace() }
 
-        Messages.load(this)
-        Debug.info(Messages.console("enabling", "version" to description.version))
+        try {
+            Messages.load(this)
+            Debug.info(Messages.console("enabling", "version" to description.version))
+        } catch (e: Throwable) { logger.severe("Messages.load 失败: ${e.message}"); e.printStackTrace() }
 
-        Config.load(this)
-        Debug.info(Messages.console("config-loaded", "debug" to Config.debug().toString()))
+        try {
+            Config.load(this)
+            Debug.info(Messages.console("config-loaded", "debug" to Config.debug().toString()))
+        } catch (e: Throwable) { logger.severe("Config.load 失败: ${e.message}"); e.printStackTrace() }
 
         // 加载 TrMenu 风格的 GUI YAML (用户可在 GUI/ 文件夹自定义全部界面)
-        GuiLoader.load(this)
+        try {
+            GuiLoader.load(this)
+        } catch (e: Throwable) { logger.severe("GuiLoader.load 失败: ${e.message}"); e.printStackTrace() }
 
-        PlayerSettings.load(this)
-        Debug.info(Messages.console("settings-loaded"))
+        try {
+            PlayerSettings.load(this)
+            Debug.info(Messages.console("settings-loaded"))
+        } catch (e: Throwable) { logger.severe("PlayerSettings.load 失败: ${e.message}"); e.printStackTrace() }
 
         // Mod 通信
-        ModChannel.register()
-        Debug.info(Messages.console("mod-channels-registered"))
+        try {
+            ModChannel.register()
+            Debug.info(Messages.console("mod-channels-registered"))
+        } catch (e: Throwable) { logger.severe("ModChannel.register 失败: ${e.message}"); e.printStackTrace() }
 
-        // 检测 Residence / PlotSquared
-        ScopeManager.setup()
+        // 检测 Residence / Lands / Dominion / PlotSquared
+        try {
+            ScopeManager.setup()
+        } catch (e: Throwable) { logger.severe("ScopeManager.setup 失败: ${e.message}"); e.printStackTrace() }
 
         // Vault 经济系统
-        EconomyManager.setup()
+        try {
+            EconomyManager.setup()
+        } catch (e: Throwable) { logger.severe("EconomyManager.setup 失败: ${e.message}"); e.printStackTrace() }
 
-        LyricDisplayManager.start(this)
-        Debug.info(Messages.console("lyric-mounted"))
+        try {
+            LyricDisplayManager.start(this)
+            Debug.info(Messages.console("lyric-mounted"))
+        } catch (e: Throwable) { logger.severe("LyricDisplayManager.start 失败: ${e.message}"); e.printStackTrace() }
 
         // 显示平台信息
         val platform = if (SchedulerUtil.isFolia()) "Folia" else server.name
         Debug.info(Messages.console("platform", "platform" to platform))
 
-        server.pluginManager.registerEvents(GuiListener, this)
-        server.pluginManager.registerEvents(ChatListener, this)
-        Debug.info(Messages.console("events-registered"))
+        try {
+            server.pluginManager.registerEvents(GuiListener, this)
+            server.pluginManager.registerEvents(ChatListener, this)
+            Debug.info(Messages.console("events-registered"))
+        } catch (e: Throwable) { logger.severe("registerEvents 失败: ${e.message}"); e.printStackTrace() }
 
-        getCommand("zmusicgui")?.setExecutor(this)
-        Debug.info(Messages.console("command-registered"))
+        try {
+            getCommand("zmusicgui")?.setExecutor(this)
+            Debug.info(Messages.console("command-registered"))
+        } catch (e: Throwable) { logger.severe("getCommand 失败: ${e.message}"); e.printStackTrace() }
 
         // bStats metrics (pluginId 31635 — Ourcraft Yuncan)
-        Metrics(this, 31635)
-        Debug.info(Messages.console("bstats-mounted"))
+        try {
+            Metrics(this, 31635)
+            Debug.info(Messages.console("bstats-mounted"))
+        } catch (e: Throwable) { logger.severe("Metrics 初始化失败: ${e.message}"); e.printStackTrace() }
 
         // 自建 checkUpdate — 检查 GitHub Releases
-        checkUpdate()
+        try { checkUpdate() } catch (e: Throwable) { logger.severe("checkUpdate 失败: ${e.message}"); e.printStackTrace() }
 
         Debug.info(Messages.console("enabled", "version" to description.version))
     }
@@ -267,7 +289,7 @@ class ZMusicGUI : JavaPlugin() {
         return true
     }
 
-    /** 推曲: /zmg push <songId> <source> — 异步获取歌曲详情并加入播放队列 */
+    /** 推曲: /zmg push <songId> <source> — 把当前歌曲推送给所选范围内的玩家 */
     private fun handlePush(sender: CommandSender, args: List<String>): Boolean {
         val player = sender as? Player ?: run {
             sender.sendMessage(color("${Messages.prefix()} &c仅玩家可执行此命令"))
@@ -279,17 +301,31 @@ class ZMusicGUI : JavaPlugin() {
         }
         val songId = args[0]
         val source = args[1]
-        player.sendMessage(color("${Messages.prefix()} &7正在获取歌曲信息..."))
-        com.ourcraft.zmusicgui.util.SchedulerUtil.runAsync(plugin, Runnable {
-            val song = com.ourcraft.zmusicgui.manager.SearchService.getSongDetailBySource(songId, source, player)
-            com.ourcraft.zmusicgui.util.SchedulerUtil.runSync(plugin, Runnable {
-                if (song != null) {
-                    MusicPlayer.pushToQueue(player, song)
-                } else {
-                    player.sendMessage(color("${Messages.prefix()} &c获取歌曲失败, 可能已下架"))
-                }
+        // 获取玩家当前选择的播放范围
+        val scope = com.ourcraft.zmusicgui.gui.QuickPlayGui.getCurrentScope(player)
+        if (scope == com.ourcraft.zmusicgui.manager.ScopeManager.Scope.SELF) {
+            // 个人范围: 加入自己的下一首播放队列
+            player.sendMessage(color("${Messages.prefix()} &7个人范围: 正在加入下一首播放..."))
+            com.ourcraft.zmusicgui.util.SchedulerUtil.runAsync(plugin, Runnable {
+                val song = com.ourcraft.zmusicgui.manager.SearchService.getSongDetailBySource(songId, source, player)
+                com.ourcraft.zmusicgui.util.SchedulerUtil.runSync(plugin, Runnable {
+                    if (song != null) {
+                        MusicPlayer.pushToQueue(player, song)
+                    } else {
+                        player.sendMessage(color("${Messages.prefix()} &c获取歌曲失败, 可能已下架"))
+                    }
+                })
             })
-        })
+        } else {
+            // 范围推送: 走同意机制, 推送给范围内其他玩家
+            if (!com.ourcraft.zmusicgui.manager.ScopeManager.isAvailable(player, scope)) {
+                player.sendMessage(color("${Messages.prefix()} &c当前范围不可用"))
+                return true
+            }
+            player.sendMessage(color("${Messages.prefix()} &7正在推送到 &f${scope.display} &7范围..."))
+            val song = com.ourcraft.zmusicgui.music.OurMusicApi.Song(songId, "", "", source)
+            com.ourcraft.zmusicgui.manager.ScopeManager.requestPlay(player, scope, source, song)
+        }
         return true
     }
 
@@ -338,38 +374,45 @@ class ZMusicGUI : JavaPlugin() {
         return true
     }
 
-    /** 查找用于推送的歌单 (优先全局/公开歌单) */
+    /** 查找用于推送的歌单 (读取 JSON 格式: playlist/<platform>/<owner>/<id>.json) */
     private fun findPlaylistForPush(
         playlistId: String, platform: String, pusherName: String
     ): com.ourcraft.zmusicgui.manager.PlaylistManager.AggregatedPlaylist? {
-        // 读取推送者的歌单文件
-        val file = java.io.File(dataFolder, "playlist/${pusherName}.yml")
-        if (!file.exists()) return null
-        try {
-            val yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file)
-            val key = "$platform:$playlistId"
-            val section = yaml.getConfigurationSection(key) ?: return null
-            val name = section.getString("name", "未知歌单") ?: "未知歌单"
-            val isPublic = section.getBoolean("public", false)
-            if (!isPublic) {
-                Debug.debug("推送歌单不可用 (非公开): $pusherName/$key")
+        // 歌单存储路径: playlist/<platform>/<pusherName>/<playlistId>.json
+        val file = java.io.File(dataFolder, "playlist/$platform/$pusherName/$playlistId.json")
+        if (!file.exists()) {
+            Debug.debug("推送歌单文件不存在: ${file.absolutePath}")
+            return null
+        }
+        return try {
+            val content = file.readText(Charsets.UTF_8)
+            val gson = com.google.gson.Gson()
+            @Suppress("UNCHECKED_CAST")
+            val data = gson.fromJson(content, Map::class.java) as Map<String, Any?>
+            val name = data["name"]?.toString() ?: "未知歌单"
+            val songs = mutableListOf<com.ourcraft.zmusicgui.manager.PlaylistManager.Song>()
+            val listRaw = data["list"]
+            if (listRaw is List<*>) {
+                for (songEl in listRaw) {
+                    val songMap = songEl as? Map<*, *> ?: continue
+                    songs.add(com.ourcraft.zmusicgui.manager.PlaylistManager.Song(
+                        id = songMap["id"]?.toString() ?: "",
+                        name = songMap["name"]?.toString() ?: "未知",
+                        singer = songMap["singer"]?.toString() ?: "未知",
+                        time = (songMap["time"] as? Number)?.toLong() ?: 0L,
+                        source = songMap["source"]?.toString() ?: platform
+                    ))
+                }
             }
-            val songsList = section.getMapList("songs")
-            val songs = songsList.mapNotNull { map ->
-                val id = map["id"]?.toString() ?: return@mapNotNull null
-                val sName = map["name"]?.toString() ?: "未知"
-                val singer = map["singer"]?.toString() ?: "未知"
-                val time = (map["time"] as? Number)?.toLong() ?: 0L
-                com.ourcraft.zmusicgui.manager.PlaylistManager.Song(id, sName, singer, time, platform)
-            }
-            return com.ourcraft.zmusicgui.manager.PlaylistManager.AggregatedPlaylist(
+            val isPublic = com.ourcraft.zmusicgui.manager.PlayerSettings.isPublicByOwner(pusherName, platform, playlistId)
+            com.ourcraft.zmusicgui.manager.PlaylistManager.AggregatedPlaylist(
                 platform = platform, id = playlistId, name = name,
                 songCount = songs.size, owner = pusherName, songs = songs,
                 isGlobal = false, isFavorite = false, isOwn = false, isPublic = isPublic
             )
         } catch (e: Throwable) {
             Debug.warn("查找推送歌单失败: ${e.message}")
-            return null
+            null
         }
     }
 

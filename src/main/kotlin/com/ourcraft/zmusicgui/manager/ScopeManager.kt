@@ -70,6 +70,11 @@ object ScopeManager {
     private var residencePlugin: Plugin? = null
     private var plotSquaredPlugin: Plugin? = null
 
+    // 玩家领地/地皮缓存 (5秒 TTL, 避免 getPlayersInResidenceImpl 遍历所有玩家时重复文件读取/反射)
+    private val residenceNameCache = ConcurrentHashMap<UUID, Pair<Long, String?>>()
+    private val plotCache = ConcurrentHashMap<UUID, Pair<Long, Any?>>()
+    private val CACHE_TTL = 5000L
+
     /** 当前领地插件 provider (由 config.yml scope.region-plugin 决定) */
     private var regionProvider: RegionProvider = NoRegionProvider
 
@@ -90,6 +95,8 @@ object ScopeManager {
                 Debug.info(">> Residence 已检测到 (版本: ${residencePlugin!!.description.version}, 类: ${residencePlugin!!.javaClass.name})，支持领地范围播放")
                 testResidenceApi()
             }
+            // 同时初始化 provider 自身的字段 (保持一致性)
+            regionProvider.setup()
         } else {
             // Lands / Dominion 由 provider 自行初始化
             regionProvider.setup()
@@ -409,8 +416,15 @@ object ScopeManager {
 
     // ==================== Residence (反射) — 原实现, 供 ResidenceProvider 委托 ====================
 
-    /** 公开 API: 获取玩家当前领地名 (委托给 regionProvider) */
-    fun getCurrentResidenceName(player: Player): String? = regionProvider.getRegionName(player)
+    /** 公开 API: 获取玩家当前领地名 (带 5 秒缓存, 避免主线程频繁文件读取) */
+    fun getCurrentResidenceName(player: Player): String? {
+        val now = System.currentTimeMillis()
+        val cached = residenceNameCache[player.uniqueId]
+        if (cached != null && now - cached.first < CACHE_TTL) return cached.second
+        val name = regionProvider.getRegionName(player)
+        residenceNameCache[player.uniqueId] = now to name
+        return name
+    }
 
     /** Residence 原实现 (文件读取 + API 反射), 供 ResidenceProvider 委托调用 */
     fun getResidenceNameImpl(player: Player): String? {
@@ -704,11 +718,12 @@ object ScopeManager {
         }
     }
 
-    /** Residence 原实现: 获取同领地玩家 (供 ResidenceProvider 委托) */
+    /** Residence 原实现: 获取同领地玩家 (供 ResidenceProvider 委托, 使用缓存避免遍历时重复文件读取) */
     fun getPlayersInResidenceImpl(requester: Player): List<Player> {
         val resName = getCurrentResidenceName(requester) ?: return listOf(requester)
         val targets = mutableListOf<Player>()
         for (p in Bukkit.getOnlinePlayers()) {
+            // 使用带缓存的 getCurrentResidenceName, 避免 50 个玩家 = 50 次文件读取
             val pRes = getCurrentResidenceName(p)
             if (pRes != null && pRes.equals(resName, ignoreCase = true)) {
                 targets.add(p)
@@ -721,7 +736,11 @@ object ScopeManager {
 
     fun getCurrentPlot(player: Player): Any? {
         if (plotSquaredPlugin == null) return null
-        return try {
+        // 5 秒缓存, 避免 getPlayersInPlot 遍历所有玩家时重复反射
+        val now = System.currentTimeMillis()
+        val cached = plotCache[player.uniqueId]
+        if (cached != null && now - cached.first < CACHE_TTL) return cached.second
+        val plot = try {
             val bukkitUtilClass = Class.forName("com.plotsquared.bukkit.util.BukkitUtil")
             val adaptMethod = bukkitUtilClass.getMethod("adapt", Player::class.java)
             val plotPlayer = adaptMethod.invoke(null, player) ?: return null
@@ -731,6 +750,8 @@ object ScopeManager {
             Debug.debug("PlotSquared API 调用失败: ${e.message}")
             null
         }
+        plotCache[player.uniqueId] = now to plot
+        return plot
     }
 
     fun getCurrentPlotId(player: Player): String? {
@@ -776,6 +797,8 @@ object ScopeManager {
     /** 清理玩家数据 (退出时调用) */
     fun cleanup(player: Player) {
         consentByPlayer.remove(player.uniqueId)
+        residenceNameCache.remove(player.uniqueId)
+        plotCache.remove(player.uniqueId)
         // 移除该玩家作为请求者的待处理请求
         val toRemove = consents.values.filter { it.requester.uniqueId == player.uniqueId }
         for (req in toRemove) {

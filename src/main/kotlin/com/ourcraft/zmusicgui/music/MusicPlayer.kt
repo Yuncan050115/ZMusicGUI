@@ -70,7 +70,7 @@ object MusicPlayer {
     )
 
     private val states = ConcurrentHashMap<Player, PlayState>()
-    private val tasks = ConcurrentHashMap<Player, Any>()
+    private var globalTask: Any? = null  // 单一全局定时器, 替代每玩家独立定时器
 
     /** 临时播放单首歌曲 (搜索点歌, 不清除歌单队列, 同时记录到点歌历史) */
     fun play(player: Player, song: OurMusicApi.SongDetail) {
@@ -166,10 +166,27 @@ object MusicPlayer {
             sendSongNotification(player, song)
         }
 
-        // 启动歌词同步 (每秒)
-        val task = SchedulerUtil.runSyncTimer(ZMusicGUI.plugin, Runnable {
-            if (!player.isOnline) { stop(player); return@Runnable }
-            val s = states[player] ?: return@Runnable
+        // 启动全局定时器 (如果尚未运行) — 单一定时器处理所有播放中的玩家, 避免每玩家一个定时器
+        ensureGlobalTask()
+    }
+
+    /** 启动全局定时器 (每秒遍历所有播放中的玩家) */
+    private fun ensureGlobalTask() {
+        if (globalTask != null) return
+        globalTask = SchedulerUtil.runSyncTimer(ZMusicGUI.plugin, Runnable { tickAll() }, 20L, 20L)
+    }
+
+    /** 全局 tick: 遍历所有播放中的玩家, 更新进度/歌词/检测结束 */
+    private fun tickAll() {
+        if (states.isEmpty()) {
+            // 没有播放中的玩家, 取消全局定时器节省资源
+            globalTask?.let { SchedulerUtil.cancelTask(it) }
+            globalTask = null
+            return
+        }
+        val toRemove = mutableListOf<Player>()
+        for ((player, s) in states) {
+            if (!player.isOnline) { toRemove.add(player); continue }
             s.currentTime++
 
             // 发送信息 HUD
@@ -183,15 +200,13 @@ object MusicPlayer {
                 ModChannel.sendLyric(player, s.lyrics[lyricIdx].text)
             }
 
-            // v3.0.1: BossBar/ActionBar 显示由 LyricDisplayManager 统一管理
-
             // 播放结束 (ending 标记防止懒加载期间重复触发)
             if (s.currentTime >= s.song.time && s.song.time > 0 && !s.ending) {
                 s.ending = true
                 onSongEnd(player, s)
             }
-        }, 20L, 20L)
-        tasks[player] = task
+        }
+        for (p in toRemove) stop(p)
     }
 
     /** 发送歌曲切换通知 (聊天栏 [结束][推曲] 按钮) */
@@ -298,11 +313,15 @@ object MusicPlayer {
 
     /** 停止播放 */
     fun stop(player: Player) {
-        tasks.remove(player)?.let { SchedulerUtil.cancelTask(it) }
         states.remove(player)
         ModChannel.stop(player)
         ModChannel.clearLyric(player)
         ModChannel.clearInfo(player)
+        // 如果没有播放中的玩家, 取消全局定时器
+        if (states.isEmpty()) {
+            globalTask?.let { SchedulerUtil.cancelTask(it) }
+            globalTask = null
+        }
     }
 
     /** 上一首 */
@@ -400,5 +419,7 @@ object MusicPlayer {
     /** 停止所有玩家的播放 */
     fun stopAll() {
         states.keys.toList().forEach { stop(it) }
+        globalTask?.let { SchedulerUtil.cancelTask(it) }
+        globalTask = null
     }
 }
