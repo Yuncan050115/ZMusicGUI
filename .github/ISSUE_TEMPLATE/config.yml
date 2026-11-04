@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage questions
+    url: https://github.com/Yuncan050115/ZMusicGUI/discussions
+    about: Ask "how do I" questions here rather than opening an issue.

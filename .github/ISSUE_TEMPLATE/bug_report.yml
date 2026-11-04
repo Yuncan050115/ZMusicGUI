@@ -1,0 +1,47 @@
+name: Bug report
+description: Something does not work the way the README says it should
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Paste the *actual* output. One raw log line tells me more than a paragraph
+        of description, and it is usually the only thing I need to find the cause.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      placeholder: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      description: Pasted as-is, fenced automatically.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release tag or commit you are running.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, runtime version, host build, device model — whatever applies.
+    validations:
+      required: true
