@@ -24,7 +24,7 @@ dependencies {
     compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
         exclude(group = "org.bukkit")
     }
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.15.0")
     // 不再依赖 ZMusic CE — 完全独立的 Kotlin 实现
     // 不再依赖 PlaceholderAPI — 歌词显示直接从 MusicPlayer.getState 读取
 }
