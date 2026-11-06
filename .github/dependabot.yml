@@ -5,6 +5,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Paper 26.x artifacts require Java 25 (Gradle variant jvm.version=25,
+      # bytecode major 69). These plugins run on Java 21 servers; the measured
+      # migration cost is recorded on closed #14/#16.
+      - dependency-name: "io.papermc.paper:paper-api"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
